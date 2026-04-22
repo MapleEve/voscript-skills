@@ -106,6 +106,8 @@ const MSG = {
     agent_hermes: "Hermes",
     agent_openclaw: "OpenClaw",
     agent_windsurf: "Windsurf",
+    agent_cline: "Cline",
+    agent_roo: "Roo Code",
     agent_custom: "自定义路径",
     noAgentDetected:
       "未检测到任何已知的 AI 代理环境。您可以选择自定义路径或退出。",
@@ -133,6 +135,8 @@ const MSG = {
       "  hermes      Hermes            (~/.hermes/skills/)",
       "  openclaw    OpenClaw          (~/.openclaw/skills/)",
       "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
+      "  cline       Cline             (~/.cline/skills/)",
+      "  roo         Roo Code          (~/.roo/skills/)",
     ].join("\n"),
   },
   en: {
@@ -177,6 +181,8 @@ const MSG = {
     agent_hermes: "Hermes",
     agent_openclaw: "OpenClaw",
     agent_windsurf: "Windsurf",
+    agent_cline: "Cline",
+    agent_roo: "Roo Code",
     agent_custom: "Custom path",
     noAgentDetected:
       "No known AI agent environment detected. You may pick a custom path or exit.",
@@ -204,6 +210,8 @@ const MSG = {
       "  hermes      Hermes            (~/.hermes/skills/)",
       "  openclaw    OpenClaw          (~/.openclaw/skills/)",
       "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
+      "  cline       Cline             (~/.cline/skills/)",
+      "  roo         Roo Code          (~/.roo/skills/)",
     ].join("\n"),
   },
 };
@@ -287,6 +295,22 @@ const AGENTS = [
     skillsDir: IS_WIN
       ? path.join(HOME, ".codeium", "windsurf", "skills")
       : path.join(HOME, ".codeium", "windsurf", "skills"),
+  },
+  {
+    id: "cline",
+    labelKey: "agent_cline",
+    detectDir: IS_WIN ? path.join(HOME, ".cline") : path.join(HOME, ".cline"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".cline", "skills")
+      : path.join(HOME, ".cline", "skills"),
+  },
+  {
+    id: "roo",
+    labelKey: "agent_roo",
+    detectDir: IS_WIN ? path.join(HOME, ".roo") : path.join(HOME, ".roo"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".roo", "skills")
+      : path.join(HOME, ".roo", "skills"),
   },
 ];
 
