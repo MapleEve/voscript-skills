@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish to npm + GitHub Release
 
 on:
   push:
@@ -12,6 +12,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -33,8 +35,25 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Publish
+      - name: Publish to npm
         if: steps.version.outputs.changed == 'true'
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          gh release create "v${{ steps.version.outputs.pkg }}" \
+            --title "v${{ steps.version.outputs.pkg }}" \
+            --notes "$(cat <<'NOTES'
+          Install or update:
+          ```bash
+          npx voscript-skills
+          ```
+          Full changelog: https://github.com/MapleEve/voscript-skills/commits/main
+          npm: https://www.npmjs.com/package/voscript-skills
+          NOTES
+          )"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
