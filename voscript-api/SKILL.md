@@ -1,9 +1,34 @@
 ---
 name: voscript-api
 description: |
-  VoScript 自托管语音转写服务 API 技能包。提供音频上传、任务轮询、结果获取、
-  字幕导出、声纹注册与管理、说话人分配、AS-norm cohort 重建等完整工作流。
-  Triggers:
+  VoScript self-hosted speech transcription API skill. Covers the full workflow:
+  submit audio, poll job status, fetch results, export subtitles (SRT/TXT/JSON),
+  manage voiceprints, assign speakers, and rebuild AS-norm cohorts.
+  Works with Claude Code, OpenClaw, Hermes, Codex, Gemini CLI, Trae, Cursor,
+  Cline, Roo Code, CodeBuddy, Qwen Code, and any agent with a skills directory.
+license: SEE LICENSE IN LICENSE
+metadata:
+  author: MapleEve
+  version: 1.1.1
+  homepage: https://github.com/MapleEve/voscript-skills
+  tags:
+    - transcription
+    - speech-to-text
+    - voiceprint
+    - audio
+    - subtitles
+    - self-hosted
+    - voscript
+  category: productivity
+  platforms:
+    - macOS
+    - Linux
+    - Windows
+  compatibility:
+    env:
+      - VOSCRIPT_URL
+      - VOSCRIPT_API_KEY
+  triggers:
     - voscript
     - VoScript
     - voscript api

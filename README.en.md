@@ -12,8 +12,8 @@
 <a href="https://www.npmjs.com/package/voscript-skills">
   <img src="https://img.shields.io/npm/dm/voscript-skills?style=flat-square" alt="npm downloads" />
 </a>
-<a href="https://github.com/MapleEve/voscript-skills/releases">
-  <img src="https://img.shields.io/github/downloads/MapleEve/voscript-skills/total?style=flat-square" alt="GitHub downloads" />
+<a href="https://www.npmjs.com/package/voscript-skills">
+  <img src="https://img.shields.io/npm/dt/voscript-skills?style=flat-square" alt="npm total downloads" />
 </a>
 <a href="https://github.com/MapleEve/VoScript">
   <img src="https://img.shields.io/badge/VoScript-main%20project-blue?style=flat-square" alt="Main project" />
