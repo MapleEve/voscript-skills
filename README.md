@@ -1,10 +1,10 @@
-<sub>🌐 <a href="README.en.md">English</a> · <b>中文</b></sub>
+<sub>🌐 <a href="README.zh.md">中文</a> · <b>English</b></sub>
 
 <div align="center">
 
 # VoScript Skills 🧰
 
-> *「你有 VoScript，也有 AI 代理——但它们还不互通。」*
+> *"You have VoScript. You have an AI agent. They don't talk to each other yet."*
 
 <a href="https://www.npmjs.com/package/voscript-skills">
   <img src="https://img.shields.io/npm/v/voscript-skills?style=flat-square" alt="npm version" />
@@ -13,78 +13,78 @@
   <img src="https://img.shields.io/npm/dt/voscript-skills?style=flat-square" alt="npm downloads" />
 </a>
 <a href="https://github.com/MapleEve/VoScript">
-  <img src="https://img.shields.io/badge/VoScript-主项目-blue?style=flat-square" alt="主项目" />
+  <img src="https://img.shields.io/badge/VoScript-main%20project-blue?style=flat-square" alt="Main project" />
 </a>
 <a href="./LICENSE">
-  <img src="https://img.shields.io/badge/License-个人免费%20·%20商业授权-orange?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/License-Free%20Personal%20%C2%B7%20Commercial%20Ask-orange?style=flat-square" alt="License" />
 </a>
 
 <br>
 
-一条命令装好，任意 AI 代理（Claude Code、Trae、Cursor……）立即能操作 VoScript。<br>
-覆盖完整工作流：提交音频、轮询任务、导出字幕、管理声纹库。<br>
-纯 Python + requests，零额外依赖。
+One command to install. Any AI agent (Claude Code, Trae, Cursor…) immediately knows how to drive VoScript.<br>
+Full workflow coverage: submit audio, poll jobs, export subtitles, manage voiceprints.<br>
+Pure Python + requests. Zero extra dependencies.
 
 <br>
 
-[安装](#安装) · [快速开始](#快速开始) · [支持的代理](#支持的代理) · [主项目](https://github.com/MapleEve/VoScript)
+[Install](#installation) · [Quick Start](#quick-start) · [Supported Agents](#supported-agents) · [Main project](https://github.com/MapleEve/VoScript)
 
 </div>
 
 ---
 
-## 你是不是遇到过这个
+## Sound familiar?
 
-> 部署了 VoScript，也在用 AI 代理做任务——但要让代理自己提交录音、等结果、导出字幕，得先写一堆接口胶水代码。
+> You deployed VoScript. You're using an AI agent to automate tasks. But to make the agent submit a recording, wait for results, and export subtitles, you'd need to write a pile of glue code first.
 
-> 或者——代理调了一下接口，发现不知道该用哪个 endpoint，不知道 job 什么时候完成，不知道声纹注册时 `speaker_label` 和显示名有什么区别。
+> Or: the agent hit the API, but didn't know which endpoint to call, when the job would finish, or why `speaker_label` and the display name are different things.
 
-这个技能包解决的就是这个。**加载一次，代理自动掌握完整 VoScript 工作流。**
+This skill package fixes that. **Load once, and the agent knows the full VoScript workflow.**
 
 ---
 
-## 安装
+## Installation
 
-### 方式一：npx（推荐）
+### Option 1: npx (recommended)
 
 ```bash
 npx voscript-skills
 ```
 
-默认安装到 `~/.claude/skills/voscript-api/`，Claude Code 自动识别。
+Installs to `~/.claude/skills/voscript-api/` by default. Claude Code picks it up automatically.
 
-**一键为所有已检测到的代理安装：**
+**Install for all detected agents at once:**
 
 ```bash
 npx voscript-skills --all
 ```
 
-**指定代理或目录：**
+**Specify an agent or directory:**
 
 ```bash
 npx voscript-skills --agent trae      # claude / trae / cursor / codex / gemini / hermes / openclaw / windsurf / cline / roo / codebuddy / qwen
 npx voscript-skills --dir /custom/skills/path
 ```
 
-**卸载：**
+**Uninstall:**
 
 ```bash
 npx voscript-skills --uninstall
 ```
 
-### 方式二：Git clone
+### Option 2: Git clone
 
 ```bash
 git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 ```
 
-克隆后 `~/.claude/skills/voscript-api/` 即为技能目录。
+After cloning, `~/.claude/skills/voscript-api/` is the skill directory.
 
 ---
 
-## 支持的代理
+## Supported Agents
 
-| 代理 | --agent | 技能目录 | 自动检测 |
+| Agent | --agent | Skills directory | Auto-detected |
 | --- | --- | --- | --- |
 | Claude Code | `claude` | `~/.claude/skills/` | ✅ |
 | Trae | `trae` | `~/.trae/context/skills/` | ✅ |
@@ -96,84 +96,84 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 | Windsurf | `windsurf` | `~/.codeium/windsurf/skills/` | ✅ |
 | Cline | `cline` | `~/.cline/skills/` | ✅ |
 | Roo Code | `roo` | `~/.roo/skills/` | ✅ |
-| CodeBuddy (腾讯云) | `codebuddy` | `~/.codebuddy/skills/` | ✅ |
-| Qwen Code (通义) | `qwen` | `~/.qwen/skills/` | ✅ |
-| 其它 | — | 使用 `--dir` 指定 | — |
+| CodeBuddy (Tencent) | `codebuddy` | `~/.codebuddy/skills/` | ✅ |
+| Qwen Code (Alibaba) | `qwen` | `~/.qwen/skills/` | ✅ |
+| Other | — | use `--dir` flag | — |
 
 ---
 
-## 你会得到什么
+## What you get
 
-**11 个即用脚本，覆盖完整工作流**
+**11 ready-to-run scripts covering the full workflow**
 
-| 脚本 | 功能 |
+| Script | Purpose |
 | --- | --- |
-| `submit_audio.py` | 提交音频文件，返回 job ID |
-| `poll_job.py` | 带进度条轮询，自动等待完成 |
-| `fetch_result.py` | 获取完整转写结果（含说话人） |
-| `export_transcript.py` | 导出 SRT / TXT / JSON |
-| `list_transcriptions.py` | 列出所有转写记录 |
-| `enroll_voiceprint.py` | 注册声纹（含 speaker_label 避坑提示） |
-| `list_voiceprints.py` | 列出已注册声纹 |
-| `assign_speaker.py` | 手动分配片段说话人 |
-| `manage_voiceprint.py` | 查看 / 重命名 / 删除声纹 |
-| `rebuild_cohort.py` | 重建 AS-norm cohort |
-| `common.py` | 基础客户端 + 诊断工具 |
+| `submit_audio.py` | Submit an audio file, get a job ID |
+| `poll_job.py` | Progress-bar polling, waits until complete |
+| `fetch_result.py` | Fetch complete transcript (with speaker names) |
+| `export_transcript.py` | Export SRT / TXT / JSON |
+| `list_transcriptions.py` | List all transcription records |
+| `enroll_voiceprint.py` | Enroll a voiceprint (with speaker_label guard) |
+| `list_voiceprints.py` | List enrolled voiceprints |
+| `assign_speaker.py` | Manually assign a segment's speaker |
+| `manage_voiceprint.py` | View / rename / delete voiceprints |
+| `rebuild_cohort.py` | Rebuild AS-norm cohort |
+| `common.py` | Base client + diagnostic helpers |
 
-每个脚本在失败时输出结构化诊断报告——明确告诉代理哪里出了问题、怎么修。
+Every script outputs a structured failure report on error — so the agent knows exactly what went wrong and how to fix it.
 
 ---
 
-## 快速开始
+## Quick Start
 
-### 前置条件
+### Prerequisites
 
 - Python 3.8+
 - `pip install requests`
-- 一个运行中的 [VoScript 服务](https://github.com/MapleEve/VoScript)
+- A running [VoScript server](https://github.com/MapleEve/VoScript)
 
-### 配置
+### Configuration
 
 ```bash
 export VOSCRIPT_URL=http://localhost:7880
 export VOSCRIPT_API_KEY=your_api_key_here
 ```
 
-或在每个脚本调用时传入 `--url` / `--api-key`。
+Or pass `--url` / `--api-key` directly to each script.
 
-### 示例
+### Examples
 
 ```bash
-# 提交音频
+# Submit audio
 python voscript-api/scripts/submit_audio.py --file meeting.mp3
 
-# 轮询直到完成
+# Poll until complete
 python voscript-api/scripts/poll_job.py --job-id tr_xxxxxxxx
 
-# 获取结果
+# Get result
 python voscript-api/scripts/fetch_result.py --tr-id tr_xxxxxxxx
 
-# 导出 SRT
+# Export SRT
 python voscript-api/scripts/export_transcript.py --tr-id tr_xxxxxxxx --format srt
 
-# 注册声纹（用 speaker_label，不是显示名！）
+# Enroll voiceprint (use speaker_label, NOT display name!)
 python voscript-api/scripts/enroll_voiceprint.py \
   --tr-id tr_xxxxxxxx \
   --speaker-label SPEAKER_00 \
-  --speaker-name "张三"
+  --speaker-name "John"
 ```
 
 ---
 
-## 在 AI 代理中加载
+## Loading in an AI Agent
 
-安装到代理的技能目录后，加载 `voscript-api/SKILL.md` 即可。代理会自动读取工作流定义和脚本用法，无需额外配置。
+Install to your agent's skills directory, then load `voscript-api/SKILL.md`. The agent reads the workflow definitions and script usage automatically — no extra configuration needed.
 
 ---
 
-## 问题反馈 & 功能建议
+## Issues & Feedback
 
-本仓库禁用了 Issues 和 Discussions。请前往主项目提交：
+Issues and Discussions are disabled on this repo. File them on the main project:
 
 → **[github.com/MapleEve/VoScript/issues](https://github.com/MapleEve/VoScript/issues)**
 
@@ -181,4 +181,4 @@ python voscript-api/scripts/enroll_voiceprint.py \
 
 ## License
 
-与 VoScript 主项目相同。详见 [LICENSE](LICENSE)。
+Same as the main VoScript project. See [LICENSE](LICENSE).

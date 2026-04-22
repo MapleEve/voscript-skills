@@ -17,7 +17,8 @@
     "bin/",
     "voscript-api/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README.zh.md"
   ],
   "engines": {
     "node": ">=14"
