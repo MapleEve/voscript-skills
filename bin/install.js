@@ -4,7 +4,7 @@
  *
  * Copies the voscript-api skill to a target AI agent's skills directory.
  * Supports Claude Code, Trae, Cursor, OpenAI Codex, Gemini CLI, Hermes,
- * OpenClaw, Windsurf, and custom directories.
+ * OpenClaw, Windsurf, Cline, Roo Code, CodeBuddy (腾讯云), Qwen Code (通义), and custom directories.
  *
  * Usage:
  *   npx voscript-skills                       # interactive
@@ -108,6 +108,8 @@ const MSG = {
     agent_windsurf: "Windsurf",
     agent_cline: "Cline",
     agent_roo: "Roo Code",
+    agent_codebuddy: "CodeBuddy (腾讯云)",
+    agent_qwen: "Qwen Code (通义)",
     agent_custom: "自定义路径",
     noAgentDetected:
       "未检测到任何已知的 AI 代理环境。您可以选择自定义路径或退出。",
@@ -137,6 +139,8 @@ const MSG = {
       "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
       "  cline       Cline             (~/.cline/skills/)",
       "  roo         Roo Code          (~/.roo/skills/)",
+      "  codebuddy   CodeBuddy 腾讯云   (~/.codebuddy/skills/)",
+      "  qwen        Qwen Code 通义     (~/.qwen/skills/)",
     ].join("\n"),
   },
   en: {
@@ -183,6 +187,8 @@ const MSG = {
     agent_windsurf: "Windsurf",
     agent_cline: "Cline",
     agent_roo: "Roo Code",
+    agent_codebuddy: "CodeBuddy",
+    agent_qwen: "Qwen Code",
     agent_custom: "Custom path",
     noAgentDetected:
       "No known AI agent environment detected. You may pick a custom path or exit.",
@@ -212,6 +218,8 @@ const MSG = {
       "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
       "  cline       Cline             (~/.cline/skills/)",
       "  roo         Roo Code          (~/.roo/skills/)",
+      "  codebuddy   CodeBuddy         (~/.codebuddy/skills/)",
+      "  qwen        Qwen Code         (~/.qwen/skills/)",
     ].join("\n"),
   },
 };
@@ -311,6 +319,24 @@ const AGENTS = [
     skillsDir: IS_WIN
       ? path.join(HOME, ".roo", "skills")
       : path.join(HOME, ".roo", "skills"),
+  },
+  {
+    id: "codebuddy",
+    labelKey: "agent_codebuddy",
+    detectDir: IS_WIN
+      ? path.join(HOME, ".codebuddy")
+      : path.join(HOME, ".codebuddy"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".codebuddy", "skills")
+      : path.join(HOME, ".codebuddy", "skills"),
+  },
+  {
+    id: "qwen",
+    labelKey: "agent_qwen",
+    detectDir: IS_WIN ? path.join(HOME, ".qwen") : path.join(HOME, ".qwen"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".qwen", "skills")
+      : path.join(HOME, ".qwen", "skills"),
   },
 ];
 
