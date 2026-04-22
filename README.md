@@ -10,10 +10,7 @@
   <img src="https://img.shields.io/npm/v/voscript-skills?style=flat-square" alt="npm version" />
 </a>
 <a href="https://www.npmjs.com/package/voscript-skills">
-  <img src="https://img.shields.io/npm/dm/voscript-skills?style=flat-square" alt="npm downloads" />
-</a>
-<a href="https://www.npmjs.com/package/voscript-skills">
-  <img src="https://img.shields.io/npm/dt/voscript-skills?style=flat-square" alt="npm total downloads" />
+  <img src="https://img.shields.io/npm/dt/voscript-skills?style=flat-square" alt="npm downloads" />
 </a>
 <a href="https://github.com/MapleEve/VoScript">
   <img src="https://img.shields.io/badge/VoScript-主项目-blue?style=flat-square" alt="主项目" />
