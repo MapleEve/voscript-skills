@@ -1,0 +1,25 @@
+{
+  "name": "voscript-skills",
+  "version": "1.0.0",
+  "description": "VoScript API skill package for AI agents — agent-agnostic helpers for transcription, voiceprint management, and export",
+  "keywords": ["voscript", "claude", "skills", "ai-agent", "transcription", "voiceprint"],
+  "homepage": "https://github.com/MapleEve/voscript-skills",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MapleEve/voscript-skills.git"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Maple (MapleEve)",
+  "bin": {
+    "voscript-skills": "bin/install.js"
+  },
+  "files": [
+    "bin/",
+    "voscript-api/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=14"
+  }
+}
