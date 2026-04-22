@@ -3,14 +3,14 @@
  * VoScript Skills installer
  *
  * Copies the voscript-api skill to a target AI agent's skills directory.
- * Supports multiple agent environments (Claude Code, Trae, Cursor, custom),
- * multilingual interactive prompts (zh/en), and cross-platform paths.
+ * Supports Claude Code, Trae, Cursor, OpenAI Codex, Gemini CLI, Hermes,
+ * OpenClaw, Windsurf, and custom directories.
  *
  * Usage:
- *   npx voscript-skills                          # interactive
- *   npx voscript-skills --agent claude|trae|cursor|custom
- *   npx voscript-skills --dir /custom/skills/path
- *   npx voscript-skills --all                    # install for every detected agent
+ *   npx voscript-skills                       # interactive
+ *   npx voscript-skills --agent <name>        # see --help for names
+ *   npx voscript-skills --dir /custom/path
+ *   npx voscript-skills --all                 # all detected agents
  *   npx voscript-skills --uninstall
  *   npx voscript-skills --lang zh|en
  *   npx voscript-skills --yes | -y
@@ -54,14 +54,13 @@ function getOpt(name) {
 const uninstall = hasFlag("--uninstall", "-u");
 const installAll = hasFlag("--all");
 const skipConfirm = hasFlag("--yes", "-y");
-const agentFlag = getOpt("--agent"); // claude | trae | cursor | custom
+const agentFlag = getOpt("--agent");
 const customDir = getOpt("--dir");
 const langOverride = getOpt("--lang");
 const showHelp = hasFlag("--help", "-h");
 
-const LANG = langOverride === "zh" || langOverride === "en"
-  ? langOverride
-  : detectLang();
+const LANG =
+  langOverride === "zh" || langOverride === "en" ? langOverride : detectLang();
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
 
@@ -102,6 +101,11 @@ const MSG = {
     agent_claude: "Claude Code",
     agent_trae: "Trae",
     agent_cursor: "Cursor",
+    agent_codex: "OpenAI Codex CLI",
+    agent_gemini: "Gemini CLI",
+    agent_hermes: "Hermes",
+    agent_openclaw: "OpenClaw",
+    agent_windsurf: "Windsurf",
     agent_custom: "自定义路径",
     noAgentDetected:
       "未检测到任何已知的 AI 代理环境。您可以选择自定义路径或退出。",
@@ -112,13 +116,23 @@ const MSG = {
     helpText: [
       "用法：",
       "  npx voscript-skills                     交互式安装",
-      "  npx voscript-skills --agent <name>      指定代理（claude|trae|cursor|custom）",
+      "  npx voscript-skills --agent <name>      指定代理（见下方代理名称）",
       "  npx voscript-skills --dir <path>        指定自定义目录（覆盖 --agent）",
       "  npx voscript-skills --all               为所有已检测到的代理安装",
       "  npx voscript-skills --uninstall         卸载",
       "  npx voscript-skills --lang zh|en        覆盖语言检测",
       "  npx voscript-skills --yes, -y           跳过确认",
       "  npx voscript-skills --help, -h          显示本帮助",
+      "",
+      "支持的代理名称（--agent）：",
+      "  claude      Claude Code       (~/.claude/skills/)",
+      "  trae        Trae              (~/.trae/context/skills/)",
+      "  cursor      Cursor            (~/.cursor/rules/skills/)",
+      "  codex       OpenAI Codex CLI  (~/.codex/skills/)",
+      "  gemini      Gemini CLI        (~/.gemini/skills/)",
+      "  hermes      Hermes            (~/.hermes/skills/)",
+      "  openclaw    OpenClaw          (~/.openclaw/skills/)",
+      "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
     ].join("\n"),
   },
   en: {
@@ -158,6 +172,11 @@ const MSG = {
     agent_claude: "Claude Code",
     agent_trae: "Trae",
     agent_cursor: "Cursor",
+    agent_codex: "OpenAI Codex CLI",
+    agent_gemini: "Gemini CLI",
+    agent_hermes: "Hermes",
+    agent_openclaw: "OpenClaw",
+    agent_windsurf: "Windsurf",
     agent_custom: "Custom path",
     noAgentDetected:
       "No known AI agent environment detected. You may pick a custom path or exit.",
@@ -168,13 +187,23 @@ const MSG = {
     helpText: [
       "Usage:",
       "  npx voscript-skills                     interactive install",
-      "  npx voscript-skills --agent <name>      target agent (claude|trae|cursor|custom)",
+      "  npx voscript-skills --agent <name>      target agent (see names below)",
       "  npx voscript-skills --dir <path>        custom directory (overrides --agent)",
       "  npx voscript-skills --all               install for every detected agent",
       "  npx voscript-skills --uninstall         uninstall",
       "  npx voscript-skills --lang zh|en        override language",
       "  npx voscript-skills --yes, -y           skip confirmation prompts",
       "  npx voscript-skills --help, -h          show this help",
+      "",
+      "Supported agent names (--agent):",
+      "  claude      Claude Code       (~/.claude/skills/)",
+      "  trae        Trae              (~/.trae/context/skills/)",
+      "  cursor      Cursor            (~/.cursor/rules/skills/)",
+      "  codex       OpenAI Codex CLI  (~/.codex/skills/)",
+      "  gemini      Gemini CLI        (~/.gemini/skills/)",
+      "  hermes      Hermes            (~/.hermes/skills/)",
+      "  openclaw    OpenClaw          (~/.openclaw/skills/)",
+      "  windsurf    Windsurf          (~/.codeium/windsurf/skills/)",
     ].join("\n"),
   },
 };
@@ -189,14 +218,12 @@ const HOME = os.homedir();
 const IS_WIN = process.platform === "win32";
 const APPDATA = process.env.APPDATA || path.join(HOME, "AppData", "Roaming");
 
-// Each agent: id, label key, detection dir, skills install dir.
+// Each agent: id, labelKey, detectDir (presence check), skillsDir (install target).
 const AGENTS = [
   {
     id: "claude",
     labelKey: "agent_claude",
-    detectDir: IS_WIN
-      ? path.join(APPDATA, "Claude")
-      : path.join(HOME, ".claude"),
+    detectDir: IS_WIN ? path.join(APPDATA, "Claude") : path.join(HOME, ".claude"),
     skillsDir: IS_WIN
       ? path.join(APPDATA, "Claude", "skills")
       : path.join(HOME, ".claude", "skills"),
@@ -204,9 +231,7 @@ const AGENTS = [
   {
     id: "trae",
     labelKey: "agent_trae",
-    detectDir: IS_WIN
-      ? path.join(APPDATA, "Trae")
-      : path.join(HOME, ".trae"),
+    detectDir: IS_WIN ? path.join(APPDATA, "Trae") : path.join(HOME, ".trae"),
     skillsDir: IS_WIN
       ? path.join(APPDATA, "Trae", "context", "skills")
       : path.join(HOME, ".trae", "context", "skills"),
@@ -214,14 +239,54 @@ const AGENTS = [
   {
     id: "cursor",
     labelKey: "agent_cursor",
-    detectDir: IS_WIN
-      ? path.join(APPDATA, "Cursor")
-      : path.join(HOME, ".cursor"),
-    // Cursor doesn't have a native skills dir — we use .cursor/rules/skills as a
-    // convention, and let users override via --dir if they prefer another path.
+    detectDir: IS_WIN ? path.join(APPDATA, "Cursor") : path.join(HOME, ".cursor"),
     skillsDir: IS_WIN
       ? path.join(APPDATA, "Cursor", "rules", "skills")
       : path.join(HOME, ".cursor", "rules", "skills"),
+  },
+  {
+    id: "codex",
+    labelKey: "agent_codex",
+    detectDir: IS_WIN ? path.join(HOME, ".codex") : path.join(HOME, ".codex"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".codex", "skills")
+      : path.join(HOME, ".codex", "skills"),
+  },
+  {
+    id: "gemini",
+    labelKey: "agent_gemini",
+    detectDir: IS_WIN ? path.join(HOME, ".gemini") : path.join(HOME, ".gemini"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".gemini", "skills")
+      : path.join(HOME, ".gemini", "skills"),
+  },
+  {
+    id: "hermes",
+    labelKey: "agent_hermes",
+    detectDir: IS_WIN ? path.join(HOME, ".hermes") : path.join(HOME, ".hermes"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".hermes", "skills")
+      : path.join(HOME, ".hermes", "skills"),
+  },
+  {
+    id: "openclaw",
+    labelKey: "agent_openclaw",
+    detectDir: IS_WIN
+      ? path.join(HOME, ".openclaw")
+      : path.join(HOME, ".openclaw"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".openclaw", "skills")
+      : path.join(HOME, ".openclaw", "skills"),
+  },
+  {
+    id: "windsurf",
+    labelKey: "agent_windsurf",
+    detectDir: IS_WIN
+      ? path.join(HOME, ".codeium", "windsurf")
+      : path.join(HOME, ".codeium", "windsurf"),
+    skillsDir: IS_WIN
+      ? path.join(HOME, ".codeium", "windsurf", "skills")
+      : path.join(HOME, ".codeium", "windsurf", "skills"),
   },
 ];
 
@@ -269,7 +334,6 @@ function copyDirRecursive(src, dest) {
 
 function removeDirRecursive(dir) {
   if (!fs.existsSync(dir)) return;
-  // Prefer fs.rmSync when available (Node >= 14.14)
   if (typeof fs.rmSync === "function") {
     fs.rmSync(dir, { recursive: true, force: true });
     return;
@@ -283,7 +347,6 @@ function removeDirRecursive(dir) {
 }
 
 function canWriteTo(dir) {
-  // Walk up until an existing ancestor is found, and check write permission.
   let current = dir;
   while (current && !fs.existsSync(current)) {
     const parent = path.dirname(current);
@@ -310,9 +373,11 @@ function prompt(question, defaultValue) {
     rl.question(`${question}${suffix}: `, (answer) => {
       rl.close();
       const trimmed = (answer || "").trim();
-      resolve(trimmed === "" && defaultValue !== undefined
-        ? String(defaultValue)
-        : trimmed);
+      resolve(
+        trimmed === "" && defaultValue !== undefined
+          ? String(defaultValue)
+          : trimmed
+      );
     });
   });
 }
@@ -385,12 +450,31 @@ function printPostInstall(destDir) {
 
 // ─── Flows ───────────────────────────────────────────────────────────────────
 
+function padRight(s, n) {
+  if (s.length >= n) return s;
+  return s + " ".repeat(n - s.length);
+}
+
+function expandHome(p) {
+  if (!p) return p;
+  if (p === "~") return HOME;
+  if (p.startsWith("~/") || p.startsWith("~\\")) {
+    return path.join(HOME, p.slice(2));
+  }
+  return p;
+}
+
+function resolveAgentDir(agentId) {
+  const a = AGENTS.find((x) => x.id === agentId);
+  return a ? a.skillsDir : null;
+}
+
 async function runInteractive() {
   printHeader();
   console.log(t("detectedHeader"));
 
   const detected = detectAgents();
-  const menu = []; // { index, agent, label, dir, detected }
+  const menu = [];
   let idx = 1;
   for (const a of detected) {
     menu.push({
@@ -407,14 +491,13 @@ async function runInteractive() {
   for (const item of menu) {
     const mark = item.detected ? t("detectedYes") : t("detectedNo");
     console.log(
-      `  [${item.index}] ${padRight(item.label, 14)} (${prettyPath(item.dir)}/)  ${mark}`
+      `  [${item.index}] ${padRight(item.label, 18)} (${prettyPath(item.dir)}/)  ${mark}`
     );
   }
   console.log(`  [${customIndex}] ${t("optCustom")}`);
   console.log(`  [${exitIndex}] ${t("optExit")}`);
   console.log("");
 
-  // Default: first detected agent, or Claude if none detected.
   const firstDetected = menu.find((m) => m.detected);
   const defaultChoice = firstDetected
     ? firstDetected.index
@@ -440,10 +523,7 @@ async function runInteractive() {
   if (picked) {
     targetDir = picked.dir;
   } else if (choice === customIndex) {
-    const cp = await prompt(
-      t("customPathPrompt"),
-      path.join(HOME, "skills")
-    );
+    const cp = await prompt(t("customPathPrompt"), path.join(HOME, "skills"));
     if (!cp) {
       console.log(t("cancelled"));
       process.exit(0);
@@ -464,39 +544,15 @@ async function runInteractive() {
 
   console.log(t("installing"));
   try {
-    const { destDir, existed } = installOne(targetDir);
-    if (existed) {
-      // Reuse post-install block for both install & update.
-    }
+    const { destDir } = installOne(targetDir);
     printPostInstall(destDir);
-    void existed;
   } catch (e) {
     console.error(e.userMessage ? e.message : e.stack || e.message);
     process.exit(1);
   }
 }
 
-function padRight(s, n) {
-  if (s.length >= n) return s;
-  return s + " ".repeat(n - s.length);
-}
-
-function expandHome(p) {
-  if (!p) return p;
-  if (p === "~") return HOME;
-  if (p.startsWith("~/") || p.startsWith("~\\")) {
-    return path.join(HOME, p.slice(2));
-  }
-  return p;
-}
-
-function resolveAgentDir(agentId) {
-  const a = AGENTS.find((x) => x.id === agentId);
-  return a ? a.skillsDir : null;
-}
-
 async function runNonInteractive() {
-  // --dir overrides --agent
   let targets = [];
 
   if (installAll) {
@@ -507,9 +563,7 @@ async function runNonInteractive() {
     }
     targets = detected.map((a) => ({ label: t(a.labelKey), dir: a.skillsDir }));
   } else if (customDir) {
-    targets = [
-      { label: t("agent_custom"), dir: expandHome(customDir) },
-    ];
+    targets = [{ label: t("agent_custom"), dir: expandHome(customDir) }];
   } else if (agentFlag) {
     if (agentFlag === "custom") {
       console.error(
@@ -529,7 +583,6 @@ async function runNonInteractive() {
     const a = AGENTS.find((x) => x.id === agentFlag);
     targets = [{ label: t(a.labelKey), dir }];
   } else {
-    // No flags → interactive
     return runInteractive();
   }
 
@@ -550,7 +603,6 @@ async function runNonInteractive() {
     return;
   }
 
-  // Install path
   if (targets.length > 1) {
     console.log(t("installAllStart"));
     for (const tgt of targets) {
@@ -591,7 +643,6 @@ async function runNonInteractive() {
     return;
   }
 
-  // Summary for --all
   console.log("");
   console.log(t("summaryHeader"));
   for (const r of results) {
@@ -602,7 +653,6 @@ async function runNonInteractive() {
     );
   }
   if (results.every((r) => r.ok)) {
-    // Show post-install hints for the first successful target.
     printPostInstall(results[0].destDir);
   } else {
     process.exit(1);
@@ -618,9 +668,7 @@ async function runNonInteractive() {
     process.exit(0);
   }
 
-  // Uninstall without explicit target → interactive pick but for uninstall.
   if (uninstall && !agentFlag && !customDir && !installAll) {
-    // Build a small interactive uninstall menu based on existing installs.
     printHeader();
     const detected = detectAgents();
     const candidates = detected
@@ -641,9 +689,7 @@ async function runNonInteractive() {
     }
 
     console.log(
-      LANG === "zh"
-        ? "找到以下已安装位置："
-        : "Found installations at:"
+      LANG === "zh" ? "找到以下已安装位置：" : "Found installations at:"
     );
     let i = 1;
     for (const c of candidates) {
