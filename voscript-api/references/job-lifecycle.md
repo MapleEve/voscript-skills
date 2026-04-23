@@ -40,8 +40,13 @@
         └───────────┘         └────────┘
 ```
 
-如果 SHA-256 命中已有结果，提交请求会直接以 `status=completed` +
-`deduplicated=true` 返回，不进入上述状态机。
+如果 SHA-256 命中已有结果或已有并发中的相同音频，提交请求会直接返回
+`deduplicated=true`：
+
+- 命中**已完成历史结果**：`{"id":"tr_xxx","status":"completed","deduplicated":true}`
+- 命中**并发 in-flight 任务**：`{"id":"tr_xxx","status":"queued","deduplicated":true}`
+
+第二种情况仍然进入已有 job 的状态机，客户端必须继续轮询。
 
 ## 各状态含义与典型耗时
 
@@ -80,9 +85,11 @@
 
 提交阶段服务端会计算上传音频的 SHA-256 哈希并与历史提交比对：
 
-- **命中**：直接返回 `{"id": "tr_xxx", "status": "completed", "deduplicated": true}`。
-  - 代理应识别 `deduplicated: true`，跳过轮询，直接进入
-    `GET /api/transcriptions/{tr_id}` 取结果。
+- **命中已完成历史结果**：返回 `{"id": "tr_xxx", "status": "completed", "deduplicated": true}`。
+  - 可直接进入 `GET /api/transcriptions/{tr_id}` 取结果。
+- **命中并发中的相同音频**：返回 `{"id": "tr_xxx", "status": "queued", "deduplicated": true}`。
+  - 这不是新 job，也不是失败；只是复用已有 in-flight job，仍需轮询
+    `GET /api/jobs/{job_id}`。
 - **未命中**：正常入队，按上述状态机推进。
 
 去重基于完整文件字节，即使仅修改元数据（如 ID3 tag）也会产生新的哈希

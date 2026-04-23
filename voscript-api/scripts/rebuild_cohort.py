@@ -6,9 +6,10 @@ Response: {"cohort_size": N, "skipped": M, "saved_to": "path"}
 
 When to use
 -----------
-Run this after enrolling 10+ speakers. AS-norm scoring needs a cohort of
-imposter embeddings to compute z-scores; larger cohorts (~50 or more) give
-more reliable similarity values.
+VoScript 0.7.1 loads/builds the cohort on startup and auto-rebuilds it in the
+background after enroll/update. Use this endpoint when you need the refresh to
+happen immediately (for example after a bulk import) or when you want the
+reported ``cohort_size`` / ``skipped`` diagnostics.
 """
 
 from __future__ import annotations

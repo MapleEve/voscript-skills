@@ -10,8 +10,9 @@ Prints each segment as:
 Then prints a speaker_map summary and a note about similarity semantics.
 
 Note:
-    Similarity values in VoScript are AS-norm z-scores, NOT [0,1] probabilities.
-    Higher z-score = more confident match against the cohort distribution.
+    Similarity values in VoScript depend on cohort state: raw cosine when the
+    cohort has fewer than 10 embeddings, AS-norm score once the cohort is large
+    enough. They are not [0,1] probabilities.
 """
 
 from __future__ import annotations
@@ -56,12 +57,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _segment_speaker(seg: Dict[str, Any], speaker_map: Dict[str, Any]) -> str:
+    direct_name = seg.get("speaker_name")
+    if direct_name:
+        return str(direct_name)
     label = seg.get("speaker") or seg.get("speaker_label")
     if not label:
         return "unknown"
     mapped = speaker_map.get(label) if isinstance(speaker_map, dict) else None
     if isinstance(mapped, dict):
-        return str(mapped.get("name") or mapped.get("speaker_id") or label)
+        return str(
+            mapped.get("matched_name")
+            or mapped.get("name")
+            or mapped.get("matched_id")
+            or mapped.get("speaker_id")
+            or label
+        )
     if isinstance(mapped, str):
         return mapped
     return str(label)
@@ -111,8 +121,8 @@ def _speaker_summary_rows(
     rows: List[Tuple[str, str, str, str, str]] = []
     for label, info in speaker_map.items():
         if isinstance(info, dict):
-            name = str(info.get("name") or "(unnamed)")
-            sid_raw = info.get("speaker_id")
+            name = str(info.get("matched_name") or info.get("name") or "(unnamed)")
+            sid_raw = info.get("matched_id") or info.get("speaker_id")
             sid = str(sid_raw) if sid_raw else t("speaker_not_enrolled")
             sim = info.get("similarity")
             sim_str = f"{sim:+.3f}" if isinstance(sim, (int, float)) else "-"

@@ -9,37 +9,36 @@
 
 - 每条字幕由四行组成：序号、时间轴、文本、空行。
 - 时间戳格式：`HH:MM:SS,mmm`（逗号分隔毫秒）。
-- 说话人名字会以前缀形式出现在文本前，例如 `张三：今天的会议...`。
+- 每条字幕正文格式为 `[speaker_name] text`。
 
 示例：
 
 ```
 1
 00:00:00,000 --> 00:00:03,200
-张三：大家好，今天我们来讨论产品路线图。
+[张三] 大家好，今天我们来讨论产品路线图。
 
 2
 00:00:03,400 --> 00:00:06,800
-李四：好的，我先汇报上周的进展。
+[李四] 好的，我先汇报上周的进展。
 ```
 
 适用场景：视频配字幕、剪辑软件导入、字幕翻译工作流。
 
 ## TXT（纯文本）
 
-可读性优先的纯文本输出，去掉时间戳与结构化字段，仅保留说话人归属与
-文本内容。
+可读性优先的纯文本输出，保留起始时间戳、说话人归属与文本内容。
 
 示例：
 
 ```
-张三：大家好，今天我们来讨论产品路线图。
-李四：好的，我先汇报上周的进展。
-张三：这部分的数据准备好了吗？
+[00:00:00] 张三: 大家好，今天我们来讨论产品路线图。
+[00:00:03] 李四: 好的，我先汇报上周的进展。
+[00:00:06] 张三: 这部分的数据准备好了吗？
 ```
 
-- 每行一个 segment，格式为 `说话人：文本`。
-- 未识别说话人的片段前缀会是 `SPEAKER_xx：`。
+- 每行一个 segment，格式为 `[HH:MM:SS] 说话人: 文本`。
+- 未识别说话人的片段前缀会是 `SPEAKER_XX`。
 
 适用场景：会议纪要、快速分享、导入飞书 / Notion 编辑。
 
@@ -54,10 +53,17 @@
   "id": "tr_xxx",
   "filename": "meeting.mp3",
   "language": "zh",
-  "params": { "min_speakers": 1, "max_speakers": 10, "denoise_model": "none" },
+  "unique_speakers": ["张三", "李四"],
+  "params": {
+    "language": "auto",
+    "min_speakers": 0,
+    "max_speakers": 0,
+    "denoise_model": "none",
+    "no_repeat_ngram_size": 0
+  },
   "speaker_map": {
-    "SPEAKER_00": { "speaker_id": "sp_abc", "name": "张三" },
-    "SPEAKER_01": { "speaker_id": "sp_def", "name": "李四" }
+    "SPEAKER_00": { "matched_id": "spk_abc12345", "matched_name": "张三", "similarity": 0.83 },
+    "SPEAKER_01": { "matched_id": "spk_def67890", "matched_name": "李四", "similarity": 0.78 }
   },
   "segments": [
     {
@@ -66,12 +72,12 @@
       "end": 3.2,
       "text": "大家好，今天我们来讨论产品路线图。",
       "speaker_label": "SPEAKER_00",
-      "speaker_id": "sp_abc",
+      "speaker_id": "spk_abc12345",
       "speaker_name": "张三",
-      "similarity": 1.23,
+      "similarity": 0.83,
       "words": [
-        { "start": 0.00, "end": 0.25, "text": "大家" },
-        { "start": 0.25, "end": 0.55, "text": "好" }
+        { "word": "大家", "start": 0.00, "end": 0.25, "score": 0.98 },
+        { "word": "好", "start": 0.25, "end": 0.55, "score": 0.97 }
       ]
     }
   ]
@@ -80,8 +86,11 @@
 
 字段说明：
 
-- `words`：**可选**，仅当服务端启用了词级对齐时存在；未对齐时该字段缺失或为空数组。
-- `similarity`：AS-norm z-score，解释见 `voiceprint-guide.md`。
+- `speaker_map`：记录 diarization 阶段的匹配结果，键为原始 `speaker_label`，值为
+  `{matched_id, matched_name, similarity}`；手动改 segment 归属时它不会被回写。
+- `unique_speakers`：从 `segments[].speaker_name` 实时推导出的去重列表。
+- `words`：**可选**，仅当服务端启用了词级对齐时存在；未对齐时该字段缺失。
+- `similarity`：cohort < 10 时是 raw cosine；cohort ≥ 10 时是 AS-norm 分数，解释见 `voiceprint-guide.md`。
 - `speaker_id` 可为 `null`，表示该 `speaker_label` 尚未绑定真实声纹。
 
 适用场景：搭建检索/摘要下游、精确到词的剪辑、声纹管理 UI。

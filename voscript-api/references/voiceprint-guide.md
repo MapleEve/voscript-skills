@@ -17,18 +17,20 @@ sample_spread 如何解读。
 > 若第一次转写的分离结果本身有误（例如两个人被合并成一个 SPEAKER），
 > 可先用 `assign_speaker.py` 手动纠正 segment 的归属，再注册声纹。
 
-## AS-norm z-score 解释
+## similarity 分数解释
 
-`segments[*].similarity` 字段返回的是 **AS-norm 规范化后的 z-score**，
-而非 [0,1] 区间的概率。
+`segments[*].similarity` / `speaker_map[*].similarity` 的语义取决于当前 cohort 状态，
+并不总是同一种分数：
 
-- **取值范围**：无硬性上下界；实际分布典型范围约 **-1 到 2**。
-- **解释**：`similarity` = (原始余弦相似度 − cohort 均值) / cohort 标准差，
-  表示「相比随机说话人，这次匹配偏离多少个标准差」。
-- **典型操作点**：`~0.5` 左右为默认匹配阈值。低于该值视为未知说话人。
+- **cohort = 0（全新安装）**：raw cosine，相似度阈值走基础 0.75 + 自适应放松。
+- **cohort = 1~9**：仍为 raw cosine；`ASNormScorer.score()` 直接 fallback。
+- **cohort ≥ 10**：切换为 **AS-norm z-score**，典型操作点约 `0.5`。
 
-**切勿将 similarity 当作百分比或概率展示给用户**，例如 `1.2` 不等于
-「120% 置信度」，正确描述应为「比随机 cohort 高 1.2 个标准差」。
+因此：
+
+- raw cosine 通常落在 `[-1, 1]`；
+- AS-norm z-score 没有固定上下界，可大于 `1` 或为负数；
+- **不要**把任何一种 `similarity` 都当作百分比或概率。
 
 ## 自适应阈值
 
@@ -42,22 +44,24 @@ sample_spread 如何解读。
 因此同一个 `similarity=0.6` 针对不同声纹可能一个匹配、另一个不匹配，
 这是自适应机制的正常行为。
 
-## Cohort 构建建议
+## Cohort 生命周期与使用建议
 
-AS-norm 的效果依赖一个代表性 cohort（对比样本集）：
+AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1 中它已经变成
+**持久化 + direct-load + 后台自动 rebuild** 的生命周期：
 
-- **最低推荐**：注册至少 **10 个不同说话人** 后再调用 `rebuild_cohort.py`。
-  少于 10 人时 cohort 的均值/方差估计不稳定，会放大 z-score 波动。
-- **重建时机**：
-  - 首次完成 10 人注册。
-  - 后续每新增约 5–10 名说话人。
-  - 删除大量旧声纹之后。
+- **启动时**：若磁盘上已有 `asnorm_cohort.npy`，服务会直接加载；否则从历史转写构建一次。
+- **运行中**：每次 enroll / update 都会标记 dirty；后台线程每 60 秒检查一次，
+  且距最后一次 enroll 超过默认 30 秒后自动重建。
+- **手动重建仍然有用**：适合批量导入历史转写后想立即生效，或需要查看
+  `cohort_size / skipped / saved_to` 做排障。
+- **10 个是激活门槛，不是手动 SOP**：少于 10 时分数仍回退为 raw cosine；
+  达到 10 后下一次自动或手动重建才会启用真正的 AS-norm。
 - **响应字段**：
   - `cohort_size`：最终纳入 cohort 的样本数量。
   - `skipped`：因样本数不足或质量太差被排除的声纹数量。
   - `saved_to`：cohort 持久化路径（用于服务端加载）。
 
-重建是一次性计算，不影响历史转写结果；新一轮转写会使用新 cohort 做评分。
+重建不会改写历史转写结果；只影响后续新的识别评分。
 
 ## sample_spread 解释
 
@@ -78,9 +82,9 @@ AS-norm 的效果依赖一个代表性 cohort（对比样本集）：
 
 ## 常见误区
 
-- **把 similarity 展示成百分比** → 错误，应说明是 z-score。
+- **把 similarity 展示成百分比** → 错误；它可能是 raw cosine，也可能是 AS-norm 分数。
 - **单样本声纹就期望高准确率** → 样本越多越稳定，建议累计 3–5 段。
-- **不重建 cohort** → 注册了很多声纹但从未调用 `rebuild_cohort`，会导致
-  AS-norm 使用过时基线，评分偏差增大。
+- **把“10+ 后手动 rebuild”当成唯一流程** → 0.7.1 已经支持后台自动重建；
+  手动 rebuild 主要用于立即生效或排障，不再是每次 enroll 后的必选动作。
 - **把 SPEAKER_xx 直接当作身份** → 同一个人在不同转写中的 SPEAKER 标签
   会变化，只有声纹绑定后的 `speaker_id` + `speaker_name` 才是跨任务稳定身份。

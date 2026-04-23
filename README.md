@@ -135,7 +135,7 @@ Every script outputs a structured failure report on error — so the agent knows
 ### Configuration
 
 ```bash
-export VOSCRIPT_URL=http://localhost:7880
+export VOSCRIPT_URL=http://localhost:8780
 export VOSCRIPT_API_KEY=your_api_key_here
 ```
 

@@ -8,7 +8,7 @@ Auth:
     ``Authorization: Bearer <key>``. This client uses ``X-API-Key`` by default.
 
 Environment variables (fallback when constructor args are omitted):
-    VOSCRIPT_URL        Base URL of the VoScript server (e.g. http://localhost:7880)
+    VOSCRIPT_URL        Base URL of the VoScript server (e.g. http://localhost:8780)
     VOSCRIPT_API_KEY    API key registered on the server
 
 Dependencies: stdlib + ``requests`` only.
@@ -102,7 +102,7 @@ MSGS: Dict[str, Dict[str, str]] = {
         "file_size_warn": "文件较大（>500MB），上传可能耗时较久",
         # Submit
         "uploading": "📤 正在上传音频文件",
-        "dedup_notice": "✓ 此音频已被转写过（SHA-256 去重），直接返回已有结果",
+        "dedup_notice": "✓ 检测到重复音频（SHA-256 去重），已复用已有结果或已有进行中任务",
         "job_queued": "✓ 转写任务已入队",
         "job_id_label": "任务 ID",
         "status_label_short": "状态",
@@ -125,8 +125,8 @@ MSGS: Dict[str, Dict[str, str]] = {
         "speaker_map_header": "说话人映射:",
         "speaker_map_empty": "（暂无说话人映射）",
         "as_norm_note": (
-            "⚠️ similarity 是 AS-norm z-score，非概率值（范围约 -1 到 2）。"
-            "典型匹配阈值约为 0.5；越大越可信。"
+            "⚠️ similarity 的语义取决于 cohort：<10 时为 raw cosine；>=10 时为 "
+            "AS-norm 分数。它不是概率值。"
         ),
         "speaker_not_enrolled": "（该说话人尚未注册声纹）",
         # Export
@@ -156,7 +156,8 @@ MSGS: Dict[str, Dict[str, str]] = {
         "tr_empty": "（暂无转写任务）",
         # Rebuild cohort
         "cohort_when_to_use": (
-            "ℹ️ 建议在注册 10 个以上说话人后执行，以获得最佳 AS-norm 评分效果。"
+            "ℹ️ 服务会在启动时加载/构建 cohort，并在 enroll/update 后后台自动重建。"
+            "手动调用适合批量导入后立即刷新或排查覆盖情况。"
         ),
         "cohort_rebuilt": "✓ Cohort 重建完成",
         "cohort_size_label": "cohort 大小",
@@ -208,7 +209,7 @@ MSGS: Dict[str, Dict[str, str]] = {
         "file_ext_warn": "File extension does not look like audio (expected mp3/m4a/wav/flac/ogg/webm)",
         "file_size_warn": "File is large (>500MB); upload may take a while",
         "uploading": "📤 Uploading audio file",
-        "dedup_notice": "✓ Audio already transcribed (SHA-256 dedup); existing result returned",
+        "dedup_notice": "✓ Duplicate audio detected (SHA-256 dedup); reusing an existing completed or in-flight job",
         "job_queued": "✓ Transcription job queued",
         "job_id_label": "Job ID",
         "status_label_short": "Status",
@@ -229,8 +230,8 @@ MSGS: Dict[str, Dict[str, str]] = {
         "speaker_map_header": "Speaker map:",
         "speaker_map_empty": "(speaker map is empty)",
         "as_norm_note": (
-            "⚠️ similarity is an AS-norm z-score, not a probability (range approx -1 to 2). "
-            "Typical match threshold ~0.5; higher = more confident."
+            "⚠️ similarity depends on cohort state: raw cosine when cohort < 10, "
+            "AS-norm score when cohort >= 10. It is not a probability."
         ),
         "speaker_not_enrolled": "(this speaker has no enrolled voiceprint)",
         "format_invalid": "format must be one of srt / txt / json",
@@ -254,7 +255,9 @@ MSGS: Dict[str, Dict[str, str]] = {
         "rename_done": "✓ Voiceprint {sid} renamed to: {name}",
         "tr_empty": "(no transcriptions)",
         "cohort_when_to_use": (
-            "ℹ️ Recommended after enrolling 10+ speakers, for best AS-norm scoring quality."
+            "ℹ️ The service loads/builds the cohort on startup and auto-rebuilds it in the "
+            "background after enroll/update. Run this manually for an immediate refresh or "
+            "to inspect cohort coverage."
         ),
         "cohort_rebuilt": "✓ Cohort rebuilt",
         "cohort_size_label": "cohort size",

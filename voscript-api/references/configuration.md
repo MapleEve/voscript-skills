@@ -6,7 +6,7 @@
 
 | 配置项              | 说明                       | 示例                       |
 | ------------------- | -------------------------- | -------------------------- |
-| `VOSCRIPT_URL`      | VoScript 服务的 HTTP 地址  | `http://localhost:7880`    |
+| `VOSCRIPT_URL`      | VoScript 服务的 HTTP 地址  | `http://localhost:8780`    |
 | `VOSCRIPT_API_KEY`  | 鉴权密钥                   | `1sa1SA1sa+`               |
 
 所有技能脚本都会按以下顺序解析配置：
@@ -17,19 +17,19 @@
 
 ## 获取服务地址
 
-- **本机运行（Docker Compose 默认）**：`http://localhost:7880`
-- **局域网部署**：形如 `http://<nas-ip>:7880` 或自定义域名
-- **容器内服务名**：默认端口 `7880`，与 `docker-compose.yml` 保持一致
+- **本机运行（默认）**：`http://localhost:8780`
+- **局域网部署**：形如 `http://<nas-ip>:8780` 或自定义域名
+- **容器内服务名**：默认端口 `8780`
 
 如不确定端口，检查 VoScript 部署端的 `docker-compose.yml` 中 `ports`
 条目，以及 `app/main.py` 中 `uvicorn` 启动配置。
 
 ## 获取 / 配置 API Key
 
-VoScript 使用静态 API Key 做鉴权，每次请求通过 Header 或查询参数传入。
+VoScript 使用静态 API Key 做鉴权，请求必须通过 Header 传入。
 API Key 在服务端配置文件中设置，部署方需要将其提供给调用端。
 
-常见鉴权方式（由具体部署决定，技能脚本会按实际服务端要求封装）：
+支持的鉴权 Header：
 
 - Header：`Authorization: Bearer <API_KEY>`
 - 或 Header：`X-API-Key: <API_KEY>`
@@ -39,7 +39,7 @@ API Key 在服务端配置文件中设置，部署方需要将其提供给调用
 ### Unix/macOS (bash/zsh)
 
 ```bash
-export VOSCRIPT_URL="http://localhost:7880"
+export VOSCRIPT_URL="http://localhost:8780"
 export VOSCRIPT_API_KEY="your_api_key_here"
 ```
 
@@ -48,7 +48,7 @@ export VOSCRIPT_API_KEY="your_api_key_here"
 ### Windows (PowerShell)
 
 ```powershell
-$env:VOSCRIPT_URL = "http://localhost:7880"
+$env:VOSCRIPT_URL = "http://localhost:8780"
 $env:VOSCRIPT_API_KEY = "your_api_key_here"
 ```
 
@@ -58,7 +58,7 @@ $env:VOSCRIPT_API_KEY = "your_api_key_here"
 
 ```bash
 python ${SKILL_PATH}/scripts/list_transcriptions.py \
-  --url http://nas.example.com:7880 \
+  --url http://nas.example.com:8780 \
   --api-key your_api_key_here
 ```
 

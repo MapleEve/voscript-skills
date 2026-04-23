@@ -135,7 +135,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 ### 配置
 
 ```bash
-export VOSCRIPT_URL=http://localhost:7880
+export VOSCRIPT_URL=http://localhost:8780
 export VOSCRIPT_API_KEY=your_api_key_here
 ```
 
