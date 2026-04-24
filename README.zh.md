@@ -62,8 +62,15 @@ npx voscript-skills --all
 **指定代理或目录：**
 
 ```bash
-npx voscript-skills --agent trae      # claude / trae / cursor / codex / gemini / hermes / openclaw / windsurf / cline / roo / codebuddy / qwen
+npx voscript-skills --agent codex     # 完整代理列表见下方表格
 npx voscript-skills --dir /custom/skills/path
+```
+
+**更新已安装的 skill：**
+
+```bash
+npx voscript-skills update --agent codex
+npx voscript-skills update --all
 ```
 
 **卸载：**
@@ -84,21 +91,58 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## 支持的代理
 
-| 代理 | --agent | 技能目录 | 自动检测 |
-| --- | --- | --- | --- |
-| Claude Code | `claude` | `~/.claude/skills/` | ✅ |
-| Trae | `trae` | `~/.trae/context/skills/` | ✅ |
-| Cursor | `cursor` | `~/.cursor/rules/skills/` | ✅ |
-| OpenAI Codex CLI | `codex` | `~/.codex/skills/` | ✅ |
-| Gemini CLI | `gemini` | `~/.gemini/skills/` | ✅ |
-| Hermes | `hermes` | `~/.hermes/skills/` | ✅ |
-| OpenClaw | `openclaw` | `~/.openclaw/skills/` | ✅ |
-| Windsurf | `windsurf` | `~/.codeium/windsurf/skills/` | ✅ |
-| Cline | `cline` | `~/.cline/skills/` | ✅ |
-| Roo Code | `roo` | `~/.roo/skills/` | ✅ |
-| CodeBuddy (腾讯云) | `codebuddy` | `~/.codebuddy/skills/` | ✅ |
-| Qwen Code (通义) | `qwen` | `~/.qwen/skills/` | ✅ |
-| 其它 | — | 使用 `--dir` 指定 | — |
+安装器对齐 Vercel `skills` 当前公开的完整 agent 列表。为了兼容旧用法，`claude`、`gemini`、`qwen` 仍可作为短别名使用。
+
+| 代理 | --agent | 技能目录 |
+| --- | --- | --- |
+| Amp | `amp` | `~/.config/agents/skills/` |
+| Kimi Code CLI | `kimi-cli` | `~/.config/agents/skills/` |
+| Replit | `replit` | `~/.config/agents/skills/` |
+| Universal | `universal` | `~/.config/agents/skills/` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/skills/` |
+| Augment | `augment` | `~/.augment/skills/` |
+| IBM Bob | `bob` | `~/.bob/skills/` |
+| Claude Code | `claude-code` | `~/.claude/skills/` |
+| OpenClaw | `openclaw` | `~/.openclaw/skills/` |
+| Cline | `cline` | `~/.agents/skills/` |
+| Warp | `warp` | `~/.agents/skills/` |
+| CodeBuddy | `codebuddy` | `~/.codebuddy/skills/` |
+| OpenAI Codex CLI | `codex` | `~/.codex/skills/` |
+| Command Code | `command-code` | `~/.commandcode/skills/` |
+| Continue | `continue` | `~/.continue/skills/` |
+| Cortex Code | `cortex` | `~/.snowflake/cortex/skills/` |
+| Crush | `crush` | `~/.config/crush/skills/` |
+| Cursor | `cursor` | `~/.cursor/skills/` |
+| Deep Agents | `deepagents` | `~/.deepagents/agent/skills/` |
+| Droid | `droid` | `~/.factory/skills/` |
+| Firebender | `firebender` | `~/.firebender/skills/` |
+| Gemini CLI | `gemini-cli` | `~/.gemini/skills/` |
+| GitHub Copilot | `github-copilot` | `~/.copilot/skills/` |
+| Goose | `goose` | `~/.config/goose/skills/` |
+| Junie | `junie` | `~/.junie/skills/` |
+| iFlow CLI | `iflow-cli` | `~/.iflow/skills/` |
+| Kilo Code | `kilo` | `~/.kilocode/skills/` |
+| Kiro CLI | `kiro-cli` | `~/.kiro/skills/` |
+| Kode | `kode` | `~/.kode/skills/` |
+| MCPJam | `mcpjam` | `~/.mcpjam/skills/` |
+| Mistral Vibe | `mistral-vibe` | `~/.vibe/skills/` |
+| Mux | `mux` | `~/.mux/skills/` |
+| OpenCode | `opencode` | `~/.config/opencode/skills/` |
+| OpenHands | `openhands` | `~/.openhands/skills/` |
+| Pi | `pi` | `~/.pi/agent/skills/` |
+| Qoder | `qoder` | `~/.qoder/skills/` |
+| Qwen Code | `qwen-code` | `~/.qwen/skills/` |
+| Roo Code | `roo` | `~/.roo/skills/` |
+| Trae | `trae` | `~/.trae/skills/` |
+| Trae CN | `trae-cn` | `~/.trae-cn/skills/` |
+| Windsurf | `windsurf` | `~/.codeium/windsurf/skills/` |
+| Zencoder | `zencoder` | `~/.zencoder/skills/` |
+| Neovate | `neovate` | `~/.neovate/skills/` |
+| Pochi | `pochi` | `~/.pochi/skills/` |
+| AdaL | `adal` | `~/.adal/skills/` |
+| 其它 | — | 使用 `--dir` 指定 |
+
+本包额外保留历史目标：`hermes` -> `~/.hermes/skills/`。
 
 ---
 

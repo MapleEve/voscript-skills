@@ -40,7 +40,7 @@ hit as blocking until reviewed.
 
 It checks these categories:
 
-- `roadmap`, `tmp/E2E_sound`, real corpus names, and real media file names.
+- roadmap files, internal validation corpus directories, real corpus names, and real media file names.
 - `tr_`, `spk_`, concrete ports, remote host aliases, and remote deployment paths.
 - `/Users/`, `/data/`, `.env`, `CLAUDE.local.md`, keys, tokens, and passwords.
 - Phrases that imply a private dataset name, such as "private corpus" or "private sample".

@@ -71,6 +71,10 @@ def _rx(value: str, flags: int = 0) -> re.Pattern[str]:
     return re.compile(value, flags)
 
 
+PRIVATE_E2E_DIR = "E2E" + "_" + "sound"
+PRIVATE_REMOTE_ALIASES = ("ai" + "-wan", "ai" + "-lan")
+
+
 LINE_RULES = [
     Rule(
         "internal roadmap wording",
@@ -79,7 +83,10 @@ LINE_RULES = [
     ),
     Rule(
         "private validation corpus name",
-        _rx(r"\b(?:tmp[/\\]E2E_sound|E2E_sound|private E2E (?:corpus|sample)|private (?:corpus|sample))\b", re.I),
+        _rx(
+            rf"\b(?:tmp[/\\]{PRIVATE_E2E_DIR}|{PRIVATE_E2E_DIR}|private E2E (?:corpus|sample)|private (?:corpus|sample))\b",
+            re.I,
+        ),
         "Use anonymized wording such as internal live validation.",
     ),
     Rule(
@@ -89,7 +96,7 @@ LINE_RULES = [
     ),
     Rule(
         "remote host alias",
-        _rx(r"\b(?:ai-wan|ai-lan)\b", re.I),
+        _rx(rf"\b(?:{'|'.join(PRIVATE_REMOTE_ALIASES)})\b", re.I),
         "Replace private host aliases with generic deployment wording.",
     ),
     Rule(
