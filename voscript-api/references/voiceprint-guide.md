@@ -106,3 +106,7 @@ AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.
 
 注意：删除 voiceprint 不会回写已完成的历史转写结果。历史结果里的
 `speaker_map` 和 `segments[].speaker_name` 反映的是任务完成当时的落盘快照。
+
+公开报告只能写验证动作与结果，例如“新声音 AS-norm 验证覆盖 enroll、cohort
+rebuild、probe hit、cleanup”。不要公开真实样本文件名、会议标题、转写文本、
+job ID、speaker ID、远端路径或候选端口；这些细节只能留在本地 ignored 记录中。

@@ -104,7 +104,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## 你会得到什么
 
-**11 个即用脚本，覆盖完整工作流**
+**12 个即用脚本，覆盖完整工作流**
 
 | 脚本 | 功能 |
 | --- | --- |
@@ -118,6 +118,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 | `assign_speaker.py` | 手动分配片段说话人 |
 | `manage_voiceprint.py` | 查看 / 重命名 / 删除声纹 |
 | `rebuild_cohort.py` | 重建 AS-norm cohort |
+| `public_release_scan.py` | 扫描公开发布材料里的隐私泄露 |
 | `common.py` | 基础客户端 + 诊断工具 |
 
 每个脚本在失败时输出结构化诊断报告——明确告诉代理哪里出了问题、怎么修。
@@ -129,6 +130,18 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 本包同步 VoScript `v0.7.2` 行为：architecture foundation、stability hardening。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹。文档也同步说明了并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数，以及新声音入库后做 AS-norm probe 的验证模式。
 
 本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于后续版本工作。
+
+---
+
+## 公开发布检查
+
+开 PR、发布文档或整理 live validation 结论前，先运行：
+
+```bash
+python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
+```
+
+公开文档只写 “internal live validation” 或 “internal benchmark set” 这类匿名化描述。不要发布 roadmap 文件、本地路径、验证日志、语料名、远端主机、调试端口、真实 job ID、speaker ID、key 或 token。
 
 ---
 

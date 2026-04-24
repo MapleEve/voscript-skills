@@ -92,7 +92,7 @@ MSGS: Dict[str, Dict[str, str]] = {
         # Checklist items
         "chk_url": "□ VoScript 服务器 URL 是否正确（包含 http:// 协议）",
         "chk_key": "□ API Key 是否与服务端配置匹配",
-        "chk_network": "□ 网络是否连通（尝试 curl $VOSCRIPT_URL/healthz）",
+        "chk_network": "□ 网络是否连通（请求 $VOSCRIPT_URL/healthz 是否返回 200）",
         "chk_running": "□ 服务器是否在运行（ssh 进去看 docker ps 是否有 voscript）",
         # File diagnostics
         "file_missing": "文件不存在",
@@ -201,7 +201,7 @@ MSGS: Dict[str, Dict[str, str]] = {
         "key_too_short": "API key is unusually short (expected a longer string)",
         "chk_url": "□ VoScript server URL correct (includes http:// scheme)",
         "chk_key": "□ API key matches the server-side configuration",
-        "chk_network": "□ Network is reachable (try curl $VOSCRIPT_URL/healthz)",
+        "chk_network": "□ Network is reachable ($VOSCRIPT_URL/healthz returns 200)",
         "chk_running": "□ Server is running (ssh in and check `docker ps` for voscript)",
         "file_missing": "File does not exist",
         "file_not_readable": "File is not readable",

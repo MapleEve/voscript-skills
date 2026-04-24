@@ -62,8 +62,8 @@
     "no_repeat_ngram_size": 0
   },
   "speaker_map": {
-    "SPEAKER_00": { "matched_id": "spk_abc12345", "matched_name": "张三", "similarity": 0.83 },
-    "SPEAKER_01": { "matched_id": "spk_def67890", "matched_name": "李四", "similarity": 0.78 }
+    "SPEAKER_00": { "matched_id": "<speaker_id_1>", "matched_name": "张三", "similarity": 0.83 },
+    "SPEAKER_01": { "matched_id": "<speaker_id_2>", "matched_name": "李四", "similarity": 0.78 }
   },
   "segments": [
     {
@@ -72,7 +72,7 @@
       "end": 3.2,
       "text": "大家好，今天我们来讨论产品路线图。",
       "speaker_label": "SPEAKER_00",
-      "speaker_id": "spk_abc12345",
+      "speaker_id": "<speaker_id_1>",
       "speaker_name": "张三",
       "similarity": 0.83,
       "words": [

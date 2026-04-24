@@ -29,7 +29,16 @@ Keep these only in ignored local files, `CLAUDE.local.md`, private notes, or pri
 
 ## Public release scan
 
-Before publishing, scan tracked files for these categories and remove or anonymize any hit:
+Before publishing, scan tracked files and remove or anonymize any hit:
+
+```bash
+python voscript-api/scripts/public_release_scan.py --root <REPO_ROOT>
+```
+
+The helper reports `file:line`, category, excerpt, and remediation advice. Treat any
+hit as blocking until reviewed.
+
+It checks these categories:
 
 - `roadmap`, `tmp/E2E_sound`, real corpus names, and real media file names.
 - `tr_`, `spk_`, concrete ports, remote host aliases, and remote deployment paths.
@@ -37,3 +46,14 @@ Before publishing, scan tracked files for these categories and remove or anonymi
 - Phrases that imply a private dataset name, such as "private corpus" or "private sample".
 
 If a detail is useful only for local operation or internal validation, do not publish it. Put it in a local ignored file instead.
+
+## Release-report wording
+
+Use short anonymized evidence in public docs:
+
+- Good: "internal live validation completed"
+- Good: "internal benchmark set completed without failures"
+- Good: "new-voice AS-norm validation covered enroll, cohort rebuild, probe hit, and cleanup"
+- Bad: real corpus directory names, meeting titles, host aliases, debug ports, job IDs, speaker IDs, or raw transcript snippets
+
+For AS-norm validation, keep the full sample selection and job/speaker identifiers in local-only notes. Public reports should state the behavior that was verified, not the private material used to verify it.

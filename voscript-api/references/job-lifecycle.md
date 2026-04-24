@@ -92,6 +92,9 @@ SHA-256 去重直接复用成功任务。
 Docker 状态显示 `unhealthy`，通常是容器 healthcheck 命令或镜像内工具链不匹配，
 不应直接判定 VoScript API 已停止。
 
+发布前要同时检查 healthcheck 实现本身：如果 compose 使用 `curl`、`wget` 等命令，
+镜像里必须实际包含这些工具；否则应改用 Python 标准库或其他已安装工具做探针。
+
 ## SHA-256 去重行为
 
 提交阶段服务端会计算上传音频的 SHA-256 哈希并与历史提交比对：

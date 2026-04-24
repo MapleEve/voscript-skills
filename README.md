@@ -104,7 +104,7 @@ After cloning, `~/.claude/skills/voscript-api/` is the skill directory.
 
 ## What you get
 
-**11 ready-to-run scripts covering the full workflow**
+**12 ready-to-run scripts covering the full workflow**
 
 | Script | Purpose |
 | --- | --- |
@@ -118,6 +118,7 @@ After cloning, `~/.claude/skills/voscript-api/` is the skill directory.
 | `assign_speaker.py` | Manually assign a segment's speaker |
 | `manage_voiceprint.py` | View / rename / delete voiceprints |
 | `rebuild_cohort.py` | Rebuild AS-norm cohort |
+| `public_release_scan.py` | Scan public release material for privacy leaks |
 | `common.py` | Base client + diagnostic helpers |
 
 Every script outputs a structured failure report on error — so the agent knows exactly what went wrong and how to fix it.
@@ -129,6 +130,18 @@ Every script outputs a structured failure report on error — so the agent knows
 This package tracks VoScript `v0.7.2` behavior: architecture foundation and stability hardening. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, and the new-voice AS-norm validation pattern.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.
+
+---
+
+## Public Release Check
+
+Before opening a PR, publishing docs, or summarizing live validation, run:
+
+```bash
+python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
+```
+
+Public docs should use anonymized wording such as "internal live validation" or "internal benchmark set". Do not publish roadmap files, local paths, validation logs, corpus names, host aliases, debug ports, real job IDs, speaker IDs, keys, or tokens.
 
 ---
 
