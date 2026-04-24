@@ -143,6 +143,8 @@ python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
 
 Public docs should use anonymized wording such as "internal live validation" or "internal benchmark set". Do not publish roadmap files, local paths, validation logs, corpus names, host aliases, debug ports, real job IDs, speaker IDs, keys, or tokens.
 
+For main-repository PR, release, and Docker publication work, load `voscript-api/references/release-workflow.md` after the privacy scan.
+
 ---
 
 ## Quick Start

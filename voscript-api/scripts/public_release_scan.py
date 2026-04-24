@@ -114,6 +114,11 @@ LINE_RULES = [
     ),
 ]
 
+PUBLIC_CONTAINER_PATHS = {
+    "/data/voiceprints",
+    "/data/transcriptions/asnorm_cohort.npy",
+}
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -211,6 +216,10 @@ def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
         for line_no, line in enumerate(lines, start=1):
             for rule in LINE_RULES:
                 if rule.pattern.search(line):
+                    if rule.name == "machine-local path" and any(
+                        path in line for path in PUBLIC_CONTAINER_PATHS
+                    ):
+                        continue
                     excerpt = line.strip()
                     if len(excerpt) > 180:
                         excerpt = excerpt[:177] + "..."
