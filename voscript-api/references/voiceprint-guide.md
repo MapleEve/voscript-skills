@@ -46,7 +46,7 @@ sample_spread 如何解读。
 
 ## Cohort 生命周期与使用建议
 
-AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1 中它已经变成
+AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.2 中它已经变成
 **持久化 + direct-load + 后台自动 rebuild** 的生命周期：
 
 - **启动时**：若磁盘上已有 `asnorm_cohort.npy`，服务会直接加载；否则从历史转写构建一次。
@@ -84,7 +84,25 @@ AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.
 
 - **把 similarity 展示成百分比** → 错误；它可能是 raw cosine，也可能是 AS-norm 分数。
 - **单样本声纹就期望高准确率** → 样本越多越稳定，建议累计 3–5 段。
-- **把“10+ 后手动 rebuild”当成唯一流程** → 0.7.1 已经支持后台自动重建；
+- **把“10+ 后手动 rebuild”当成唯一流程** → 0.7.1+ 已经支持后台自动重建；
   手动 rebuild 主要用于立即生效或排障，不再是每次 enroll 后的必选动作。
 - **把 SPEAKER_xx 直接当作身份** → 同一个人在不同转写中的 SPEAKER 标签
   会变化，只有声纹绑定后的 `speaker_id` + `speaker_name` 才是跨任务稳定身份。
+
+## 新声音 AS-norm E2E 验证模式
+
+发布或排障时，如果需要确认“新声音入库后能被 AS-norm 路径命中”，推荐使用
+同一真实音频的两段不同片段：
+
+1. 用第一段完成一次转写，找到目标 `speaker_label`。
+2. 调用 `enroll_voiceprint.py` 注册该 `speaker_label` 为临时测试姓名。
+3. 调用 `rebuild_cohort.py`，确认响应里有 `cohort_size / skipped / saved_to`。
+4. 用第二段提交新的 probe 转写，等待完成。
+5. 检查 `speaker_map` 或 segment 字段中 `matched_id` 是否等于刚注册的
+   `speaker_id`，且 `similarity` 是有限数值。cohort 足够大时该值是无界
+   AS-norm z-score，不是百分比。
+6. 测试结束后删除临时 voiceprint；如不希望 UI 留下历史残影，也删除对应
+   probe/enroll transcription artifacts。
+
+注意：删除 voiceprint 不会回写已完成的历史转写结果。历史结果里的
+`speaker_map` 和 `segments[].speaker_name` 反映的是任务完成当时的落盘快照。

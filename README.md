@@ -124,6 +124,14 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ---
 
+## VoScript Compatibility
+
+This package tracks VoScript `v0.7.2` behavior: roadmap visibility, architecture foundation, and stability hardening. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, and the new-voice AS-norm validation pattern.
+
+It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain main-project roadmap items.
+
+---
+
 ## Quick Start
 
 ### Prerequisites

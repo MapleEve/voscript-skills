@@ -124,6 +124,14 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ---
 
+## VoScript 兼容说明
+
+本包同步 VoScript `v0.7.2` 行为：roadmap visibility、architecture foundation、stability hardening。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹。文档也同步说明了并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数，以及新声音入库后做 AS-norm probe 的验证模式。
+
+本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于主项目 roadmap 后续项。
+
+---
+
 ## 快速开始
 
 ### 前置条件
