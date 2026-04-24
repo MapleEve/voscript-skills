@@ -117,7 +117,8 @@ python ${SKILL_PATH}/scripts/public_release_scan.py --root <REPO_ROOT>
 
 如果任务包含 VoScript 主仓 PR、merge、GitHub Release 或 Docker 发布，还必须读取
 `${SKILL_PATH}/references/release-workflow.md`，按其中顺序执行，不跳过 PR 预审和
-Docker workflow 结果检查。
+Docker workflow 结果检查。发布完成后，删除 feature worktree 前必须按其中的
+post-release local wrap-up checklist 迁移或确认丢弃 ignored 本地验证产物。
 
 ## 1. 配置说明
 
