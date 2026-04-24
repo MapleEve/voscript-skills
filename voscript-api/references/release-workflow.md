@@ -11,6 +11,9 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
    background SSH session with `ssh -fN ai` or `ssh -fN ai-wan`, verify it with
    `ssh ai 'hostname; date'` or `ssh ai-wan 'hostname; date'`, and then run
    remote commands through `ssh ai '<cmd>'` or `ssh ai-wan '<cmd>'`.
+   If the tool sandbox cannot reach the alias but the user's terminal can, do
+   not diagnose the remote as unreachable; use the local-terminal route defined
+   in `remote-debugging.md`.
 3. Run the public privacy scan before writing PR or release text:
 
    ```bash
@@ -26,6 +29,35 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 10. Create the GitHub release/tag only after the merge commit is known.
 11. Watch the Docker release workflow until it finishes. Report image tags and digests when available.
 12. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
+
+## Remote deploy verification
+
+When a release must be started on a remote VoScript host, use this order after
+the PR merge/tag/release source is known:
+
+1. Verify the SSH alias with `hostname; date`.
+2. On the remote checkout, inspect branch, upstream, dirty files, and current
+   commit before changing anything.
+3. If the remote checkout is dirty, save both a status file and patch under an
+   ignored backup directory, then `git stash push -u` with a timestamped message.
+   Do not discard remote edits without a recoverable backup.
+4. Fetch tags and update only to the intended release branch, tag, or merge
+   commit. If a hard reset is necessary to deploy the release, do it only after
+   step 3.
+5. Rebuild/restart the container using the repository's compose/service
+   definition. Do not delete runtime data, ignored validation artifacts, or
+   persisted model/voiceprint stores unless the user explicitly asks.
+6. Wait for readiness. Retry `/healthz` during cold start instead of treating an
+   immediate connection reset as final failure.
+7. Confirm `/healthz` returns 200 and `/openapi.json` reports the intended
+   release version.
+8. Start a persistent `docker logs -f --tail=200` monitor into an ignored remote
+   log file, tail it, and check startup/model/worker errors.
+9. If the client URL returns "plain HTTP request was sent to HTTPS port", switch
+   the same host and port to `https://` before reporting the usable entrypoint.
+10. Report only sanitized state: commit/tag, health, version, monitor location,
+    and whether backups were created. Do not paste secrets, real hostnames, raw
+    private logs, or private paths into public release text.
 
 ## Public wording rules
 

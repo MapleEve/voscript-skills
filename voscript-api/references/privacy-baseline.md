@@ -9,6 +9,9 @@ Use this checklist before changing public VoScript docs, examples, scripts, or s
 - Placeholder examples such as `<API_KEY>`, `<tr_id>`, `<speaker_id>`, and `<job_id>`.
 - Anonymized validation wording such as "internal live validation" or "internal benchmark set".
 - Synthetic example speaker names that cannot be mistaken for real users, hosts, files, or meetings.
+- The documented shorthand SSH aliases `ai` and `ai-wan` inside this skill's
+  remote-debugging runbook. The real host, user, port, key, path, and token
+  material behind those aliases remains local-only.
 
 ## Public-safe only after anonymization
 
@@ -41,7 +44,7 @@ hit as blocking until reviewed.
 It checks these categories:
 
 - roadmap files, internal validation corpus directories, real corpus names, and real media file names.
-- `tr_`, `spk_`, concrete ports, remote host aliases, and remote deployment paths.
+- `tr_`, `spk_`, concrete ports, private remote host aliases, and remote deployment paths.
 - `/Users/`, `/data/`, `.env`, `CLAUDE.local.md`, keys, tokens, and passwords.
 - Phrases that imply a private dataset name, such as "private corpus" or "private sample".
 
@@ -54,6 +57,6 @@ Use short anonymized evidence in public docs:
 - Good: "internal live validation completed"
 - Good: "internal benchmark set completed without failures"
 - Good: "new-voice AS-norm validation covered enroll, cohort rebuild, probe hit, and cleanup"
-- Bad: real corpus directory names, meeting titles, host aliases, debug ports, job IDs, speaker IDs, or raw transcript snippets
+- Bad: real corpus directory names, meeting titles, private host aliases, debug ports, job IDs, speaker IDs, or raw transcript snippets
 
 For AS-norm validation, keep the full sample selection and job/speaker identifiers in local-only notes. Public reports should state the behavior that was verified, not the private material used to verify it.
