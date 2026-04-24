@@ -7,7 +7,7 @@
 | 配置项              | 说明                       | 示例                       |
 | ------------------- | -------------------------- | -------------------------- |
 | `VOSCRIPT_URL`      | VoScript 服务的 HTTP 地址  | `http://localhost:8780`    |
-| `VOSCRIPT_API_KEY`  | 鉴权密钥                   | `1sa1SA1sa+`               |
+| `VOSCRIPT_API_KEY`  | 鉴权密钥                   | `<API_KEY>`                |
 
 所有技能脚本都会按以下顺序解析配置：
 
