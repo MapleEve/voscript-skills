@@ -5,21 +5,27 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 ## Required order
 
 1. Confirm the worktree branch, remote tracking branch, and cleanliness.
-2. Run the public privacy scan before writing PR or release text:
+2. If any release validation, deployment, restart, smoke test, or log check
+   requires SSH on a remote VoScript host, read
+   `references/remote-debugging.md` first. Ask the user to start the local
+   background SSH session with `ssh -fN ai` or `ssh -fN ai-wan`, verify it with
+   `ssh ai 'hostname; date'` or `ssh ai-wan 'hostname; date'`, and then run
+   remote commands through `ssh ai '<cmd>'` or `ssh ai-wan '<cmd>'`.
+3. Run the public privacy scan before writing PR or release text:
 
    ```bash
    python voscript-api/scripts/public_release_scan.py --root <REPO_ROOT>
    ```
 
-3. Verify version metadata and changelog are aligned.
-4. Run the same fast checks as the repository CI: lint, format, unit/security tests, and dependency audit.
-5. Create or update the PR with anonymized text only.
-6. Wait for PR checks and inspect logs before merging if any check fails.
-7. Before merge, review changed files, release notes, public leak scan, Docker healthcheck, version metadata, and changelog.
-8. Merge using the repository's existing merge style.
-9. Create the GitHub release/tag only after the merge commit is known.
-10. Watch the Docker release workflow until it finishes. Report image tags and digests when available.
-11. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
+4. Verify version metadata and changelog are aligned.
+5. Run the same fast checks as the repository CI: lint, format, unit/security tests, and dependency audit.
+6. Create or update the PR with anonymized text only.
+7. Wait for PR checks and inspect logs before merging if any check fails.
+8. Before merge, review changed files, release notes, public leak scan, Docker healthcheck, version metadata, and changelog.
+9. Merge using the repository's existing merge style.
+10. Create the GitHub release/tag only after the merge commit is known.
+11. Watch the Docker release workflow until it finishes. Report image tags and digests when available.
+12. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
 
 ## Public wording rules
 

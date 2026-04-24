@@ -72,7 +72,7 @@ def _rx(value: str, flags: int = 0) -> re.Pattern[str]:
 
 
 PRIVATE_E2E_DIR = "E2E" + "_" + "sound"
-PRIVATE_REMOTE_ALIASES = ("ai" + "-wan", "ai" + "-lan")
+PRIVATE_REMOTE_ALIASES = ("ai" + "-lan",)
 
 
 LINE_RULES = [

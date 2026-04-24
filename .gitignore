@@ -37,3 +37,11 @@ __pycache__/
 # Misc
 tmp/
 *.log
+
+# Local secrets / operator config
+CLAUDE.local.md
+.env
+.env.*
+!.env.example
+*.key
+*.pem
