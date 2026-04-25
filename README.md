@@ -171,7 +171,7 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ## VoScript Compatibility
 
-This package tracks VoScript `v0.7.2` behavior: architecture foundation and stability hardening. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, and the new-voice AS-norm validation pattern.
+This package tracks VoScript `v0.7.3` behavior: runtime stability hotfixes on top of the architecture foundation. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, PyTorch 2.6 / pyannote checkpoint-safe loading expectations, and the new-voice AS-norm validation pattern.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.
 
