@@ -171,7 +171,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## VoScript 兼容说明
 
-本包同步 VoScript `v0.7.2` 行为：architecture foundation、stability hardening。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹。文档也同步说明了并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数，以及新声音入库后做 AS-norm probe 的验证模式。
+本包同步 VoScript `v0.7.3` 行为：architecture foundation 之上的运行时稳定性热修复。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹。文档也同步说明了并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数、PyTorch 2.6 / pyannote checkpoint 安全加载预期，以及新声音入库后做 AS-norm probe 的验证模式。
 
 本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于后续版本工作。
 
@@ -185,9 +185,10 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
 ```
 
-公开文档只写 “internal live validation” 或 “internal benchmark set” 这类匿名化描述。不要发布 roadmap 文件、本地路径、验证日志、语料名、远端主机、调试端口、真实 job ID、speaker ID、key 或 token。
+公开文档只写 “internal live validation” 或 “internal benchmark set” 这类匿名化描述。不要发布 roadmap 文件、本地路径、验证日志、语料名、私有远端主机别名、调试端口、真实 job ID、speaker ID、key 或 token。
 
 处理主仓 PR、Release 和 Docker 发布时，隐私扫描后继续读取 `voscript-api/references/release-workflow.md`。
+处理远端部署/调试时，读取 `voscript-api/references/remote-debugging.md`，只使用其中固定的直连 SSH alias / WAN ProxyCommand 流程。
 
 ---
 

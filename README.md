@@ -171,7 +171,7 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ## VoScript Compatibility
 
-This package tracks VoScript `v0.7.2` behavior: architecture foundation and stability hardening. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, and the new-voice AS-norm validation pattern.
+This package tracks VoScript `v0.7.3` behavior: runtime stability hotfixes on top of the architecture foundation. The public workflow remains submit → poll → fetch/export → manage voiceprints. It also documents in-flight dedup polling, persisted AS-norm cohort rebuilds, unbounded AS-norm scores, PyTorch 2.6 / pyannote checkpoint-safe loading expectations, and the new-voice AS-norm validation pattern.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.
 
@@ -185,9 +185,10 @@ Before opening a PR, publishing docs, or summarizing live validation, run:
 python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
 ```
 
-Public docs should use anonymized wording such as "internal live validation" or "internal benchmark set". Do not publish roadmap files, local paths, validation logs, corpus names, host aliases, debug ports, real job IDs, speaker IDs, keys, or tokens.
+Public docs should use anonymized wording such as "internal live validation" or "internal benchmark set". Do not publish roadmap files, local paths, validation logs, corpus names, private host aliases, debug ports, real job IDs, speaker IDs, keys, or tokens.
 
 For main-repository PR, release, and Docker publication work, load `voscript-api/references/release-workflow.md` after the privacy scan.
+For remote deploy/debug work, load `voscript-api/references/remote-debugging.md` and use only the documented direct SSH alias / WAN ProxyCommand flow.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "voscript-skills",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "VoScript API skill package for AI agents — agent-agnostic helpers for transcription, voiceprint management, and export",
   "keywords": [
     "voscript",
