@@ -7,13 +7,13 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 1. Confirm the worktree branch, remote tracking branch, and cleanliness.
 2. If any release validation, deployment, restart, smoke test, or log check
    requires SSH on a remote VoScript host, read
-   `references/remote-debugging.md` first. Ask the user to start the local
-   background SSH session with `ssh -fN ai` or `ssh -fN ai-wan`, verify it with
-   `ssh ai 'hostname; date'` or `ssh ai-wan 'hostname; date'`, and then run
-   remote commands through `ssh ai '<cmd>'` or `ssh ai-wan '<cmd>'`.
-   If the tool sandbox cannot reach the alias but the user's terminal can, do
-   not diagnose the remote as unreachable; use the local-terminal route defined
-   in `remote-debugging.md`.
+   `references/remote-debugging.md` first. Verify direct `ssh ai` first; if it
+   is unavailable, use
+   `ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan '<cmd>'`.
+   Do not open iTerm or invent new tunnels. If the tool sandbox cannot reach
+   either documented route but the user's terminal can, do not diagnose the
+   remote as unreachable; stop and report that the local-terminal route is
+   required.
 3. Run the public privacy scan before writing PR or release text:
 
    ```bash
@@ -35,7 +35,8 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 When a release must be started on a remote VoScript host, use this order after
 the PR merge/tag/release source is known:
 
-1. Verify the SSH alias with `hostname; date`.
+1. Verify the route with `ssh ai 'hostname; date'`, or with the WAN
+   ProxyCommand from `remote-debugging.md` if direct SSH is unavailable.
 2. On the remote checkout, inspect branch, upstream, dirty files, and current
    commit before changing anything.
 3. If the remote checkout is dirty, save both a status file and patch under an
@@ -47,15 +48,18 @@ the PR merge/tag/release source is known:
 5. Rebuild/restart the container using the repository's compose/service
    definition. Do not delete runtime data, ignored validation artifacts, or
    persisted model/voiceprint stores unless the user explicitly asks.
-6. Wait for readiness. Retry `/healthz` during cold start instead of treating an
+6. Treat container/service `voscript` on port `8780` as the primary service.
+   Old candidate containers or candidate ports are not release failures unless
+   this release explicitly targets that candidate.
+7. Wait for readiness. Retry `/healthz` during cold start instead of treating an
    immediate connection reset as final failure.
-7. Confirm `/healthz` returns 200 and `/openapi.json` reports the intended
+8. Confirm `/healthz` returns 200 and `/openapi.json` reports the intended
    release version.
-8. Start a persistent `docker logs -f --tail=200` monitor into an ignored remote
+9. Start a persistent `docker logs -f --tail=200` monitor into an ignored remote
    log file, tail it, and check startup/model/worker errors.
-9. If the client URL returns "plain HTTP request was sent to HTTPS port", switch
+10. If the client URL returns "plain HTTP request was sent to HTTPS port", switch
    the same host and port to `https://` before reporting the usable entrypoint.
-10. Report only sanitized state: commit/tag, health, version, monitor location,
+11. Report only sanitized state: commit/tag, health, version, monitor location,
     and whether backups were created. Do not paste secrets, real hostnames, raw
     private logs, or private paths into public release text.
 

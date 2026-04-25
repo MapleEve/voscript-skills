@@ -188,7 +188,7 @@ python voscript-api/scripts/public_release_scan.py --root /path/to/public/repo
 公开文档只写 “internal live validation” 或 “internal benchmark set” 这类匿名化描述。不要发布 roadmap 文件、本地路径、验证日志、语料名、私有远端主机别名、调试端口、真实 job ID、speaker ID、key 或 token。
 
 处理主仓 PR、Release 和 Docker 发布时，隐私扫描后继续读取 `voscript-api/references/release-workflow.md`。
-处理远端部署/调试时，读取 `voscript-api/references/remote-debugging.md`，只使用其中固定的本机 SSH alias 流程。
+处理远端部署/调试时，读取 `voscript-api/references/remote-debugging.md`，只使用其中固定的直连 SSH alias / WAN ProxyCommand 流程。
 
 ---
 

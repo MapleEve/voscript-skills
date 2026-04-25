@@ -46,7 +46,7 @@ sample_spread 如何解读。
 
 ## Cohort 生命周期与使用建议
 
-AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.2 中它已经变成
+AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.3 中它已经变成
 **持久化 + direct-load + 后台自动 rebuild** 的生命周期：
 
 - **启动时**：若磁盘上已有 `asnorm_cohort.npy`，服务会直接加载；否则从历史转写构建一次。
@@ -62,6 +62,23 @@ AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.
   - `saved_to`：cohort 持久化路径（用于服务端加载）。
 
 重建不会改写历史转写结果；只影响后续新的识别评分。
+
+## PyTorch 2.6 / pyannote checkpoint 加载
+
+PyTorch 2.6 的 `torch.load` 默认 `weights_only=True`。pyannote checkpoint 需要
+scoped safe globals 才能可信加载：
+
+- `torch.torch_version.TorchVersion`
+- `pyannote.audio.core.task.Problem`
+- `pyannote.audio.core.task.Specifications`
+- `pyannote.audio.core.task.Resolution`
+
+实现要求：
+
+- 只在 pyannote checkpoint 加载处用 scoped `safe_globals` 包住最小名单。
+- 不要为了绕过错误改成 `weights_only=False`。
+- 不要使用全局 `add_safe_globals` 污染整个进程。
+- 不要加入未验证的额外类；新增类必须先确认来源和必要性。
 
 ## sample_spread 解释
 
@@ -88,6 +105,10 @@ AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.
   手动 rebuild 主要用于立即生效或排障，不再是每次 enroll 后的必选动作。
 - **把 SPEAKER_xx 直接当作身份** → 同一个人在不同转写中的 SPEAKER 标签
   会变化，只有声纹绑定后的 `speaker_id` + `speaker_name` 才是跨任务稳定身份。
+- **用 `voiceprints.db` 推断线上当前数量** → 错误；API 原始响应优先。
+  若 API 与文件观察不一致，先复核服务 `DATA_DIR`、挂载卷和请求目标。
+- **修 pyannote 加载时关闭 `weights_only` 或全局放行类型** → 错误；只允许在
+  checkpoint 加载处使用最小 scoped safe globals。
 
 ## 新声音 AS-norm E2E 验证模式
 
