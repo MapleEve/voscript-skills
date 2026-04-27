@@ -2,7 +2,7 @@
 
 Use this minimal runbook for every remote VoScript debugging session. Prefer the
 tool environment route first; fall back to the WAN proxy route only when the
-direct alias is unavailable.
+documented direct SSH alias is unavailable.
 
 ## Non-negotiable rule
 
@@ -10,16 +10,17 @@ Do not open iTerm or another GUI terminal for remote debugging. Run SSH commands
 from the tool environment whenever possible. The fixed route order is:
 
 ```bash
-ssh ai '<cmd>'
+ssh <DIRECT_SSH_ALIAS> '<cmd>'
 ```
 
-If `ssh ai` is unavailable, use the WAN alias through the local SOCKS proxy:
+If the direct SSH alias is unavailable, use the documented WAN alias through the
+local SOCKS proxy:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan '<cmd>'
+ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> '<cmd>'
 ```
 
-Verify with `ssh ai 'hostname; date'` first, then with the WAN proxy command if
+Verify the documented direct SSH alias first, then the WAN ProxyCommand flow if
 needed. If both fail but the user's terminal succeeds, treat the sandbox result
 as irrelevant for remote reachability and stop to report that the local terminal
 route is required. Do not invent raw SSH hosts, open iTerm, or create new tunnel
@@ -30,41 +31,42 @@ plans.
 - Never write real hostnames, tokens, passwords, private key paths, or remote
   deployment paths into public docs, commits, PRs, release notes, or reusable
   examples.
-- Keep real connection material in `CLAUDE.local.md`, shell environment,
-  `~/.ssh/config`, or another ignored local config file.
-- Public examples may use the SSH aliases `ai` and `ai-wan` plus the documented
-  local SOCKS proxy port. The actual host, user, key, token, and deployment path
-  values must remain local-only.
+- Keep real connection material in ignored operator config, shell environment,
+  local SSH config, or another ignored local config file.
+- Public examples may only name placeholders such as `<DIRECT_SSH_ALIAS>`,
+  `<WAN_SSH_ALIAS>`, `<SOCKS_PROXY_HOST>`, and `<SOCKS_PROXY_PORT>`. The actual
+  alias names, host, user, proxy address, proxy port, key, token, and deployment
+  path values must remain local-only.
 
 ## Verify the route
 
 Verify before changing anything:
 
 ```bash
-ssh ai 'hostname; date'
+ssh <DIRECT_SSH_ALIAS> 'hostname; date'
 ```
 
 If direct SSH is unavailable, verify WAN through the proxy:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan 'hostname; date'
+ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> 'hostname; date'
 ```
 
-Codex should not replace these with lower-level SSH host or port templates in
-public docs. The aliases are resolved by the user's local SSH config.
+Codex should not replace these placeholders with lower-level SSH host or port
+values in public docs. The aliases are resolved by the user's local SSH config.
 
 ## Run subsequent commands
 
 After verification, run remote commands directly through the same alias:
 
 ```bash
-ssh ai '<cmd>'
+ssh <DIRECT_SSH_ALIAS> '<cmd>'
 ```
 
 For WAN:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan '<cmd>'
+ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> '<cmd>'
 ```
 
 For multi-line remote work, write a temporary local script or here-doc and send
@@ -74,9 +76,9 @@ temporary log so the agent can read and summarize the result.
 
 ## Debugging sequence
 
-1. Verify direct route: run `ssh ai 'hostname; date'`.
-2. If direct route fails, verify WAN proxy route with
-   `ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan 'hostname; date'`.
+1. Verify direct route through the documented direct SSH alias.
+2. If direct route fails, verify WAN proxy route with the documented WAN
+   ProxyCommand flow.
 3. Read-only confirmation: check VoScript version, image tag or branch,
    container status, health endpoint, and disk/GPU pressure before changing
    anything.
@@ -89,7 +91,8 @@ temporary log so the agent can read and summarize the result.
 
 ## Service identity and data checks
 
-- The primary VoScript service is container/service `voscript` on port `8780`.
+- The primary VoScript service is container/service `voscript` on the default
+  service port.
 - Old candidate containers, candidate ports, or scratch deploys are not primary
   service failures unless the user explicitly asks to debug that candidate.
 - For service health, prefer `GET /healthz` and `GET /openapi.json` on the
@@ -109,10 +112,11 @@ Before overwriting a remote VoScript checkout:
 2. If tracked or untracked source/test files are dirty, preserve them first:
 
    ```bash
-   mkdir -p tmp/deploy-backups
+   backup_dir="<IGNORED_BACKUP_DIR>"
+   mkdir -p "$backup_dir"
    stamp=$(date +%Y%m%d-%H%M%S)
-   git status --short > "tmp/deploy-backups/pre-deploy-$stamp.status.txt"
-   git diff > "tmp/deploy-backups/pre-deploy-$stamp.patch" || true
+   git status --short > "$backup_dir/pre-deploy-$stamp.status.txt"
+   git diff > "$backup_dir/pre-deploy-$stamp.patch" || true
    git stash push -u -m "pre-deploy-$stamp" || true
    ```
 
@@ -136,7 +140,7 @@ After restart or rebuild:
 4. Start a persistent log monitor in an ignored path, for example:
 
    ```bash
-   nohup docker logs -f --tail=200 voscript > tmp/live-monitor.log 2>&1 &
+   nohup docker logs -f --tail=200 voscript > <IGNORED_LOG_FILE> 2>&1 &
    ```
 
 5. Tail the monitor log and confirm no startup crash, model-load error, worker
@@ -165,7 +169,7 @@ stopping it.
 
 ### No route to host, timeout, or connection refused
 
-1. Try the WAN proxy route if direct `ssh ai` failed.
+1. Try the WAN proxy route if the documented direct SSH alias failed.
 2. Ask the user to verify local network/VPN/WAN connectivity and firewall
    access only after both documented routes fail.
 3. Retry the verification command only after connectivity is restored.

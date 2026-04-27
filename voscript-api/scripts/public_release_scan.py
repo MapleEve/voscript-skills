@@ -54,8 +54,6 @@ TEXT_EXTENSIONS = {
 }
 
 ALLOW_CONTENT = {
-    "voscript-api/SKILL.md",
-    "voscript-api/references/privacy-baseline.md",
     "voscript-api/scripts/public_release_scan.py",
 }
 
@@ -72,7 +70,11 @@ def _rx(value: str, flags: int = 0) -> re.Pattern[str]:
 
 
 PRIVATE_E2E_DIR = "E2E" + "_" + "sound"
-PRIVATE_REMOTE_ALIASES = ("ai" + "-lan",)
+PRIVATE_DIRECT_SSH_ALIAS = "a" + "i"
+PRIVATE_WAN_SSH_ALIAS = PRIVATE_DIRECT_SSH_ALIAS + "-" + "wan"
+PRIVATE_REMOTE_ALIASES = (PRIVATE_DIRECT_SSH_ALIAS + "-" + "lan", PRIVATE_WAN_SSH_ALIAS)
+PRIVATE_PROXY_HOST_PORT = "127" + ".0.0.1:" + "78" + "97"
+PRIVATE_LOCAL_CONFIG = "CLAUDE" + ".local.md"
 
 
 LINE_RULES = [
@@ -95,9 +97,32 @@ LINE_RULES = [
         "Move machine-specific paths to local-only notes.",
     ),
     Rule(
+        "local-only directory reference",
+        _rx(r"\b(?:road" + r"map|tmp)[/\\]"),
+        "Replace local-only directory paths with generic ignored archive wording.",
+    ),
+    Rule(
+        "local operator config file",
+        _rx(re.escape(PRIVATE_LOCAL_CONFIG)),
+        "Refer to ignored operator config generically in public docs.",
+    ),
+    Rule(
+        "local ssh config path",
+        _rx(r"(?:~[/\\])?\.ssh[/\\]config"),
+        "Refer to local SSH config generically in public docs.",
+    ),
+    Rule(
         "remote host alias",
-        _rx(rf"\b(?:{'|'.join(PRIVATE_REMOTE_ALIASES)})\b", re.I),
+        _rx(
+            rf"(?:\bssh\s+{PRIVATE_DIRECT_SSH_ALIAS}\b|`{PRIVATE_DIRECT_SSH_ALIAS}`|\b(?:{'|'.join(PRIVATE_REMOTE_ALIASES)})\b)",
+            re.I,
+        ),
         "Replace private host aliases with generic deployment wording.",
+    ),
+    Rule(
+        "private proxy/debug port",
+        _rx(re.escape(PRIVATE_PROXY_HOST_PORT)),
+        "Replace private proxy/debug ports with placeholders.",
     ),
     Rule(
         "candidate debug port",
@@ -213,6 +238,8 @@ def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
     findings: list[Finding] = []
     for rel in paths:
         rel_str = rel.as_posix()
+        if rel.name in {".gitignore", ".npmignore", ".dockerignore"}:
+            continue
         if rel_str in ALLOW_CONTENT or not is_text_file(rel):
             continue
         full = root / rel

@@ -7,13 +7,13 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 1. Confirm the worktree branch, remote tracking branch, and cleanliness.
 2. If any release validation, deployment, restart, smoke test, or log check
    requires SSH on a remote VoScript host, read
-   `references/remote-debugging.md` first. Verify direct `ssh ai` first; if it
-   is unavailable, use
-   `ssh -o 'ProxyCommand=nc -X 5 -x 127.0.0.1:7897 %h %p' ai-wan '<cmd>'`.
-   Do not open iTerm or invent new tunnels. If the tool sandbox cannot reach
-   either documented route but the user's terminal can, do not diagnose the
-   remote as unreachable; stop and report that the local-terminal route is
-   required.
+   `references/remote-debugging.md` first. Verify the documented direct SSH
+   alias first; if it is unavailable, use the documented WAN ProxyCommand flow.
+   Keep the actual alias names, proxy address, proxy port, host, user, key, and
+   deployment path in local-only configuration. Do not open iTerm or invent new
+   tunnels. If the tool sandbox cannot reach either documented route but the
+   user's terminal can, do not diagnose the remote as unreachable; stop and
+   report that the local-terminal route is required.
 3. Run the public privacy scan before writing PR or release text:
 
    ```bash
@@ -35,7 +35,7 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 When a release must be started on a remote VoScript host, use this order after
 the PR merge/tag/release source is known:
 
-1. Verify the route with `ssh ai 'hostname; date'`, or with the WAN
+1. Verify the route with the documented direct SSH alias, or with the WAN
    ProxyCommand from `remote-debugging.md` if direct SSH is unavailable.
 2. On the remote checkout, inspect branch, upstream, dirty files, and current
    commit before changing anything.
@@ -48,7 +48,7 @@ the PR merge/tag/release source is known:
 5. Rebuild/restart the container using the repository's compose/service
    definition. Do not delete runtime data, ignored validation artifacts, or
    persisted model/voiceprint stores unless the user explicitly asks.
-6. Treat container/service `voscript` on port `8780` as the primary service.
+6. Treat container/service `voscript` on the default service port as primary.
    Old candidate containers or candidate ports are not release failures unless
    this release explicitly targets that candidate.
 7. Wait for readiness. Retry `/healthz` during cold start instead of treating an
@@ -58,7 +58,8 @@ the PR merge/tag/release source is known:
 9. Start a persistent `docker logs -f --tail=200` monitor into an ignored remote
    log file, tail it, and check startup/model/worker errors.
 10. If the client URL returns "plain HTTP request was sent to HTTPS port", switch
-   the same host and port to `https://` before reporting the usable entrypoint.
+   the same host and service port to `https://` before reporting the usable
+   entrypoint.
 11. Report only sanitized state: commit/tag, health, version, monitor location,
     and whether backups were created. Do not paste secrets, real hostnames, raw
     private logs, or private paths into public release text.
@@ -88,8 +89,8 @@ After release publication is complete, do not leave local-only validation materi
    - In the main worktree, check branch, upstream, cleanliness, and whether it is ahead/behind or divergent.
    - In the feature worktree, check tracked changes, untracked files, and ignored files.
 2. If the main worktree is dirty, ahead/behind, or divergent, do not automatically pull, rebase, merge, or reset it. Report the state and wait for the operator's decision.
-3. Identify feature-worktree ignored artifacts that must be retained, such as validation outputs, local roadmap notes, release scratch files, and command logs.
-4. Move retained local-only material into an ignored path in the main worktree, for example `tmp/`, `roadmap/`, or the repository's agreed local-only archive.
+3. Identify feature-worktree ignored artifacts that must be retained, such as validation outputs, private planning notes, release scratch files, and command logs.
+4. Move retained local-only material into the repository's agreed ignored local-only archive.
 5. Before moving files, confirm the main worktree's `.gitignore` covers the destination path and file patterns. If it does not, update the ignore rules first and verify the files remain untracked.
 6. Do not convert raw logs, job IDs, speaker IDs, hostnames, local paths, corpus names, media filenames, or private planning links into tracked public docs during this wrap-up.
 7. Before deleting the feature worktree, confirm that every retained artifact has been migrated to the main worktree archive or that the operator explicitly confirmed it can be discarded.
