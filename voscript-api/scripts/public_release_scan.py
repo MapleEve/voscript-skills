@@ -76,6 +76,29 @@ PRIVATE_REMOTE_ALIASES = (PRIVATE_DIRECT_SSH_ALIAS + "-" + "lan", PRIVATE_WAN_SS
 PRIVATE_PROXY_HOST_PORT = "127" + ".0.0.1:" + "78" + "97"
 PRIVATE_LOCAL_CONFIG = "CLAUDE" + ".local.md"
 
+SECRET_ASSIGNMENT_RE = _rx(
+    r"^\s*(?:[{},]\s*)?(?:export\s+)?['\"]?(?P<name>[A-Za-z_][A-Za-z0-9_-]*)['\"]?\s*(?:=|:)\s*(?P<value>.*)$",
+    re.I,
+)
+SECRET_VALUE_PREFIX_RE = _rx(
+    r"^(?:sk-(?:live|test)-|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)[A-Za-z0-9_+/\-.=]{8,}$"
+)
+PLACEHOLDER_VALUE_RE = _rx(
+    r"^(?:<[^>\s]+>|\$\{[A-Za-z_][A-Za-z0-9_]*(?::-[^}]*)?\}|"
+    r"(?:your|example|sample|dummy|fake|test)[-_]?[A-Za-z0-9_-]*"
+    r"(?:api[-_]?key|key|token|password|secret)[A-Za-z0-9_-]*)$",
+    re.I,
+)
+EXPLICIT_SECRET_NAMES = {
+    "api_key",
+    "hf_token",
+    "password",
+    "secret",
+    "token",
+    "voscript_api_key",
+    "voscript_token",
+}
+
 
 LINE_RULES = [
     Rule(
@@ -138,11 +161,6 @@ LINE_RULES = [
         "real speaker id",
         _rx(r"\bspk_[0-9a-f]{6,}\b", re.I),
         "Replace real speaker IDs with <speaker_id>.",
-    ),
-    Rule(
-        "inline secret-looking value",
-        _rx(r"\b(?:api[_-]?key|token|password|secret)\s*[:=]\s*['\"](?!<|\$|your_|example)[A-Za-z0-9_+/\-.]{12,}['\"]", re.I),
-        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
     ),
 ]
 
@@ -234,6 +252,81 @@ def path_findings(paths: Iterable[Path]) -> list[Finding]:
     return findings
 
 
+def is_secret_name(name: str) -> bool:
+    normalized = name.replace("-", "_").lower()
+    return (
+        normalized in EXPLICIT_SECRET_NAMES
+        or "api_key" in normalized
+        or normalized.endswith("_token")
+        or normalized == "token"
+        or "password" in normalized
+        or "secret" in normalized
+    )
+
+
+def assigned_value(raw: str) -> str:
+    value = raw.strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"'}:
+        quote = value[0]
+        end = value.find(quote, 1)
+        if end == -1:
+            return value[1:].strip()
+        return value[1:end].strip()
+    return value.split("#", 1)[0].strip().split(maxsplit=1)[0].rstrip(",") if value else ""
+
+
+def is_placeholder_secret_value(value: str) -> bool:
+    normalized = value.strip()
+    if normalized in {"", "..."}:
+        return True
+    if normalized.lower() in {
+        "changeme",
+        "change-me",
+        "change_me",
+        "placeholder",
+        "redacted",
+        "replace-me",
+        "replace_me",
+        "todo",
+    }:
+        return True
+    return bool(PLACEHOLDER_VALUE_RE.fullmatch(normalized))
+
+
+def looks_like_secret_value(value: str) -> bool:
+    if is_placeholder_secret_value(value):
+        return False
+    compact = re.sub(r"\s+", "", value.strip())
+    if SECRET_VALUE_PREFIX_RE.match(compact):
+        return True
+    if len(compact) < 12:
+        return False
+    if len([char for char in compact if char.isalnum()]) < 12:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z0-9_+/\-.=]+", compact))
+
+
+def secret_assignment_finding(path: str, line_no: int, line: str) -> Finding | None:
+    match = SECRET_ASSIGNMENT_RE.match(line)
+    if not match or not is_secret_name(match.group("name")):
+        return None
+    value = assigned_value(match.group("value"))
+    if not looks_like_secret_value(value):
+        return None
+    excerpt = line.strip()
+    if len(excerpt) > 180:
+        excerpt = excerpt[:177] + "..."
+    return Finding(
+        "secret-looking assignment",
+        path,
+        line_no,
+        excerpt,
+        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
+    )
+
+
 def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
     findings: list[Finding] = []
     for rel in paths:
@@ -248,6 +341,9 @@ def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
         except OSError:
             continue
         for line_no, line in enumerate(lines, start=1):
+            secret_finding = secret_assignment_finding(rel_str, line_no, line)
+            if secret_finding:
+                findings.append(secret_finding)
             for rule in LINE_RULES:
                 if rule.pattern.search(line):
                     if rule.name == "machine-local path" and any(
