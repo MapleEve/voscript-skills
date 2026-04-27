@@ -54,8 +54,6 @@ TEXT_EXTENSIONS = {
 }
 
 ALLOW_CONTENT = {
-    "voscript-api/SKILL.md",
-    "voscript-api/references/privacy-baseline.md",
     "voscript-api/scripts/public_release_scan.py",
 }
 
@@ -72,7 +70,46 @@ def _rx(value: str, flags: int = 0) -> re.Pattern[str]:
 
 
 PRIVATE_E2E_DIR = "E2E" + "_" + "sound"
-PRIVATE_REMOTE_ALIASES = ("ai" + "-lan",)
+PRIVATE_DIRECT_SSH_ALIAS = "a" + "i"
+PRIVATE_WAN_SSH_ALIAS = PRIVATE_DIRECT_SSH_ALIAS + "-" + "wan"
+PRIVATE_REMOTE_ALIASES = (PRIVATE_DIRECT_SSH_ALIAS + "-" + "lan", PRIVATE_WAN_SSH_ALIAS)
+PRIVATE_PROXY_HOST_PORT = "127" + ".0.0.1:" + "78" + "97"
+PRIVATE_LOCAL_CONFIG = "CLAUDE" + ".local.md"
+
+SECRET_ASSIGNMENT_RE = _rx(
+    r"(?<![A-Za-z0-9_-])(?:export\s+)?['\"]?(?P<name>[A-Za-z_][A-Za-z0-9_-]*)['\"]?"
+    r"\s*(?:=|:)\s*(?P<value>\"[^\"\n]*\"|'[^'\n]*'|`[^`\n]*`|[^\s,;]+)?",
+    re.I,
+)
+SECRET_VALUE_PREFIX_RE = _rx(
+    r"^(?:sk[-_](?:(?:live|test)[-_])?|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)"
+    r"[A-Za-z0-9_+/\-.=]{8,}$"
+)
+RAW_BEARER_TOKEN_RE = _rx(
+    r"(?<![A-Za-z0-9_-])Bearer\s+(?P<value>[A-Za-z0-9_+/\-.=]{12,})(?![A-Za-z0-9_-])",
+    re.I,
+)
+RAW_SECRET_TOKEN_RE = _rx(
+    r"(?<![A-Za-z0-9_+/\-.=])"
+    r"(?P<value>(?:sk[-_](?:(?:live|test)[-_])?|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)"
+    r"[A-Za-z0-9_+/\-.=]{8,})"
+    r"(?![A-Za-z0-9_+/\-.=])"
+)
+PLACEHOLDER_VALUE_RE = _rx(
+    r"^(?:<[^>\s]+>|\$\{[A-Za-z_][A-Za-z0-9_]*(?::-[^}]*)?\}|\$[A-Za-z_][A-Za-z0-9_]*|"
+    r"(?:your|example|sample|dummy|fake|test)[-_]?[A-Za-z0-9_-]*"
+    r"(?:api[-_]?key|key|token|password|secret)[A-Za-z0-9_-]*)$",
+    re.I,
+)
+EXPLICIT_SECRET_NAMES = {
+    "api_key",
+    "hf_token",
+    "password",
+    "secret",
+    "token",
+    "voscript_api_key",
+    "voscript_token",
+}
 
 
 LINE_RULES = [
@@ -95,9 +132,32 @@ LINE_RULES = [
         "Move machine-specific paths to local-only notes.",
     ),
     Rule(
+        "local-only directory reference",
+        _rx(r"\b(?:road" + r"map|tmp)[/\\]"),
+        "Replace local-only directory paths with generic ignored archive wording.",
+    ),
+    Rule(
+        "local operator config file",
+        _rx(re.escape(PRIVATE_LOCAL_CONFIG)),
+        "Refer to ignored operator config generically in public docs.",
+    ),
+    Rule(
+        "local ssh config path",
+        _rx(r"(?:~[/\\])?\.ssh[/\\]config"),
+        "Refer to local SSH config generically in public docs.",
+    ),
+    Rule(
         "remote host alias",
-        _rx(rf"\b(?:{'|'.join(PRIVATE_REMOTE_ALIASES)})\b", re.I),
+        _rx(
+            rf"(?:\bssh\s+{PRIVATE_DIRECT_SSH_ALIAS}\b|`{PRIVATE_DIRECT_SSH_ALIAS}`|\b(?:{'|'.join(PRIVATE_REMOTE_ALIASES)})\b)",
+            re.I,
+        ),
         "Replace private host aliases with generic deployment wording.",
+    ),
+    Rule(
+        "private proxy/debug port",
+        _rx(re.escape(PRIVATE_PROXY_HOST_PORT)),
+        "Replace private proxy/debug ports with placeholders.",
     ),
     Rule(
         "candidate debug port",
@@ -113,11 +173,6 @@ LINE_RULES = [
         "real speaker id",
         _rx(r"\bspk_[0-9a-f]{6,}\b", re.I),
         "Replace real speaker IDs with <speaker_id>.",
-    ),
-    Rule(
-        "inline secret-looking value",
-        _rx(r"\b(?:api[_-]?key|token|password|secret)\s*[:=]\s*['\"](?!<|\$|your_|example)[A-Za-z0-9_+/\-.]{12,}['\"]", re.I),
-        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
     ),
 ]
 
@@ -209,10 +264,128 @@ def path_findings(paths: Iterable[Path]) -> list[Finding]:
     return findings
 
 
+def is_secret_name(name: str) -> bool:
+    normalized = name.replace("-", "_").lower()
+    return (
+        normalized in EXPLICIT_SECRET_NAMES
+        or "api_key" in normalized
+        or normalized.endswith("_token")
+        or normalized == "token"
+        or "password" in normalized
+        or "secret" in normalized
+    )
+
+
+def assigned_value(raw: str | None) -> str:
+    value = (raw or "").strip()
+    if not value:
+        return ""
+    if value[0] in {"'", '"', "`"}:
+        quote = value[0]
+        end = value.find(quote, 1)
+        if end == -1:
+            return value[1:].strip()
+        return value[1:end].strip()
+    return (
+        value.split("#", 1)[0]
+        .strip()
+        .split(maxsplit=1)[0]
+        .rstrip("`.,;)]\"'")
+        .strip()
+        if value
+        else ""
+    )
+
+
+def is_placeholder_secret_value(value: str) -> bool:
+    normalized = value.strip()
+    if normalized in {"", "..."}:
+        return True
+    if normalized.lower() in {
+        "changeme",
+        "change-me",
+        "change_me",
+        "placeholder",
+        "redacted",
+        "replace-me",
+        "replace_me",
+        "todo",
+    }:
+        return True
+    return bool(PLACEHOLDER_VALUE_RE.fullmatch(normalized))
+
+
+def looks_like_secret_value(value: str) -> bool:
+    if is_placeholder_secret_value(value):
+        return False
+    compact = re.sub(r"\s+", "", value.strip())
+    if SECRET_VALUE_PREFIX_RE.match(compact):
+        return True
+    if len(compact) < 12:
+        return False
+    if len([char for char in compact if char.isalnum()]) < 12:
+        return False
+    return bool(re.fullmatch(r"[A-Za-z0-9_+/\-.=]+", compact))
+
+
+def is_backtick_wrapped_value(raw: str | None) -> bool:
+    return bool(raw and raw.strip().startswith("`"))
+
+
+def secret_assignment_finding(path: str, line_no: int, line: str) -> Finding | None:
+    for match in SECRET_ASSIGNMENT_RE.finditer(line):
+        if not is_secret_name(match.group("name")):
+            continue
+        raw_value = match.group("value")
+        value = assigned_value(raw_value)
+        if not value or is_placeholder_secret_value(value):
+            continue
+        if not looks_like_secret_value(value) and not is_backtick_wrapped_value(raw_value):
+            continue
+        break
+    else:
+        return None
+    excerpt = line.strip()
+    if len(excerpt) > 180:
+        excerpt = excerpt[:177] + "..."
+    return Finding(
+        "secret-looking assignment",
+        path,
+        line_no,
+        excerpt,
+        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
+    )
+
+
+def raw_secret_token_finding(path: str, line_no: int, line: str) -> Finding | None:
+    for pattern in (RAW_BEARER_TOKEN_RE, RAW_SECRET_TOKEN_RE):
+        for match in pattern.finditer(line):
+            value = assigned_value(match.group("value"))
+            if looks_like_secret_value(value):
+                break
+        else:
+            continue
+        break
+    else:
+        return None
+    excerpt = line.strip()
+    if len(excerpt) > 180:
+        excerpt = excerpt[:177] + "..."
+    return Finding(
+        "secret-looking raw token",
+        path,
+        line_no,
+        excerpt,
+        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
+    )
+
+
 def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
     findings: list[Finding] = []
     for rel in paths:
         rel_str = rel.as_posix()
+        if rel.name in {".gitignore", ".npmignore", ".dockerignore"}:
+            continue
         if rel_str in ALLOW_CONTENT or not is_text_file(rel):
             continue
         full = root / rel
@@ -221,6 +394,12 @@ def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
         except OSError:
             continue
         for line_no, line in enumerate(lines, start=1):
+            secret_finding = secret_assignment_finding(rel_str, line_no, line)
+            if secret_finding:
+                findings.append(secret_finding)
+            raw_secret_finding = raw_secret_token_finding(rel_str, line_no, line)
+            if raw_secret_finding:
+                findings.append(raw_secret_finding)
             for rule in LINE_RULES:
                 if rule.pattern.search(line):
                     if rule.name == "machine-local path" and any(

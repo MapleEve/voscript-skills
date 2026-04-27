@@ -9,9 +9,10 @@ Use this checklist before changing public VoScript docs, examples, scripts, or s
 - Placeholder examples such as `<API_KEY>`, `<tr_id>`, `<speaker_id>`, and `<job_id>`.
 - Anonymized validation wording such as "internal live validation" or "internal benchmark set".
 - Synthetic example speaker names that cannot be mistaken for real users, hosts, files, or meetings.
-- The documented shorthand SSH aliases `ai` and `ai-wan` inside this skill's
-  remote-debugging runbook. The real host, user, port, key, path, and token
-  material behind those aliases remains local-only.
+- The abstract "documented direct SSH alias / WAN ProxyCommand flow" wording
+  inside this skill's remote-debugging runbook. The actual alias names, proxy
+  address, proxy port, host, user, key, path, and token material remain
+  local-only.
 
 ## Public-safe only after anonymization
 
@@ -21,9 +22,9 @@ Use this checklist before changing public VoScript docs, examples, scripts, or s
 
 ## Local-only
 
-Keep these only in ignored local files, `CLAUDE.local.md`, private notes, or private test artifacts:
+Keep these only in ignored local files, ignored operator config, private notes, or private test artifacts:
 
-- Internal planning files, long-term direction documents, and roadmap directories.
+- Internal planning files, long-term direction documents, and private planning directories.
 - Raw validation logs, JSON results, screenshots, and batch outputs.
 - Real audio/video corpus names, file names, meeting titles, or transcript excerpts.
 - Real job IDs, speaker IDs, upload IDs, transcription IDs, hostnames, ports, remote paths, and deployment names.
@@ -43,10 +44,11 @@ hit as blocking until reviewed.
 
 It checks these categories:
 
-- roadmap files, internal validation corpus directories, real corpus names, and real media file names.
+- Private planning directories, internal validation material directories, real corpus names, and real media file names.
 - `tr_`, `spk_`, concrete ports, private remote host aliases, and remote deployment paths.
-- `/Users/`, `/data/`, `.env`, `CLAUDE.local.md`, keys, tokens, and passwords.
-- Phrases that imply a private dataset name, such as "private corpus" or "private sample".
+- Machine-local absolute path prefixes, environment files, local agent config,
+  keys, tokens, and passwords.
+- Phrases that imply a named private dataset, sample set, or validation corpus.
 
 If a detail is useful only for local operation or internal validation, do not publish it. Put it in a local ignored file instead.
 
