@@ -269,7 +269,7 @@ def assigned_value(raw: str | None) -> str:
     value = (raw or "").strip()
     if not value:
         return ""
-    if value[0] in {"'", '"'}:
+    if value[0] in {"'", '"', "`"}:
         quote = value[0]
         end = value.find(quote, 1)
         if end == -1:
@@ -317,12 +317,19 @@ def looks_like_secret_value(value: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z0-9_+/\-.=]+", compact))
 
 
+def is_backtick_wrapped_value(raw: str | None) -> bool:
+    return bool(raw and raw.strip().startswith("`"))
+
+
 def secret_assignment_finding(path: str, line_no: int, line: str) -> Finding | None:
     for match in SECRET_ASSIGNMENT_RE.finditer(line):
         if not is_secret_name(match.group("name")):
             continue
-        value = assigned_value(match.group("value"))
-        if not looks_like_secret_value(value):
+        raw_value = match.group("value")
+        value = assigned_value(raw_value)
+        if not value or is_placeholder_secret_value(value):
+            continue
+        if not looks_like_secret_value(value) and not is_backtick_wrapped_value(raw_value):
             continue
         break
     else:

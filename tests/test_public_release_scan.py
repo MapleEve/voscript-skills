@@ -115,6 +115,29 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("secret-looking assignment", result.stdout)
 
+    def test_blocks_backtick_wrapped_secret_assignments(self) -> None:
+        synthetic_value_a = "sk-live-" + "realisticsecret123456789"
+        synthetic_value_b = "hf_" + "realisticsecret123456789"
+        synthetic_value_c = "github_pat_" + "realisticsecret123456789"
+        short_value = "abc"
+        key_name = "api" + "_key"
+        hf_name = "HF" + "_TOKEN"
+        voscript_key_name = "VOSCRIPT" + "_API_KEY"
+        token_name = "TO" + "KEN"
+        fixture = "\n".join(
+            [
+                f"{key_name}: `{synthetic_value_a}`",
+                f"{hf_name}=`{synthetic_value_b}`",
+                f"- {voscript_key_name}: `{short_value}`",
+                f"`export {token_name}=`{synthetic_value_c}``",
+            ]
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("secret-looking assignment", result.stdout)
+
     def test_allows_markdown_inline_secret_placeholders(self) -> None:
         fixture = "\n".join(
             [
@@ -124,6 +147,11 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
                 "Use `TOKEN=$API_KEY`.",
                 "Keep `HF_TOKEN=${HF_TOKEN}` in local config.",
                 "Write `SECRET=REDACTED` in examples.",
+                "Use `api_key: <API_KEY>`.",
+                "Keep `HF_TOKEN=${API_KEY}`.",
+                "- VOSCRIPT_API_KEY: `your-api-key`",
+                "Write `TOKEN=`REDACTED``.",
+                "Leave `api_key: `` blank.",
             ]
         )
 
