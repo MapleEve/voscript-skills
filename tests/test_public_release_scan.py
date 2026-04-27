@@ -84,6 +84,53 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
+    def test_blocks_markdown_inline_secret_assignments(self) -> None:
+        synthetic_value = "sk-live-" + "realisticsecret123456789"
+        fixture = (
+            "Use `export VOSCRIPT_API_KEY="
+            + synthetic_value
+            + "` before running remote commands."
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("secret-looking assignment", result.stdout)
+
+    def test_blocks_markdown_list_secret_assignments(self) -> None:
+        synthetic_value = "RealisticPassword" + "123456789"
+        fixture = "- password=" + synthetic_value
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("secret-looking assignment", result.stdout)
+
+    def test_blocks_markdown_inline_colon_secret_assignments(self) -> None:
+        synthetic_value = "sk-live-" + "realisticsecret123456789"
+        fixture = "Set `api_key: " + synthetic_value + "` in local-only config."
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("secret-looking assignment", result.stdout)
+
+    def test_allows_markdown_inline_secret_placeholders(self) -> None:
+        fixture = "\n".join(
+            [
+                "Use `export VOSCRIPT_API_KEY=<API_KEY>`.",
+                "- password=changeme",
+                "Set `api_key: your-api-key`.",
+                "Use `TOKEN=$API_KEY`.",
+                "Keep `HF_TOKEN=${HF_TOKEN}` in local config.",
+                "Write `SECRET=REDACTED` in examples.",
+            ]
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

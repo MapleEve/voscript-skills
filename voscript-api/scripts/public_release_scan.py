@@ -77,14 +77,15 @@ PRIVATE_PROXY_HOST_PORT = "127" + ".0.0.1:" + "78" + "97"
 PRIVATE_LOCAL_CONFIG = "CLAUDE" + ".local.md"
 
 SECRET_ASSIGNMENT_RE = _rx(
-    r"^\s*(?:[{},]\s*)?(?:export\s+)?['\"]?(?P<name>[A-Za-z_][A-Za-z0-9_-]*)['\"]?\s*(?:=|:)\s*(?P<value>.*)$",
+    r"(?<![A-Za-z0-9_-])(?:export\s+)?['\"]?(?P<name>[A-Za-z_][A-Za-z0-9_-]*)['\"]?"
+    r"\s*(?:=|:)\s*(?P<value>\"[^\"\n]*\"|'[^'\n]*'|`[^`\n]*`|[^\s,;]+)?",
     re.I,
 )
 SECRET_VALUE_PREFIX_RE = _rx(
     r"^(?:sk-(?:live|test)-|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)[A-Za-z0-9_+/\-.=]{8,}$"
 )
 PLACEHOLDER_VALUE_RE = _rx(
-    r"^(?:<[^>\s]+>|\$\{[A-Za-z_][A-Za-z0-9_]*(?::-[^}]*)?\}|"
+    r"^(?:<[^>\s]+>|\$\{[A-Za-z_][A-Za-z0-9_]*(?::-[^}]*)?\}|\$[A-Za-z_][A-Za-z0-9_]*|"
     r"(?:your|example|sample|dummy|fake|test)[-_]?[A-Za-z0-9_-]*"
     r"(?:api[-_]?key|key|token|password|secret)[A-Za-z0-9_-]*)$",
     re.I,
@@ -264,8 +265,8 @@ def is_secret_name(name: str) -> bool:
     )
 
 
-def assigned_value(raw: str) -> str:
-    value = raw.strip()
+def assigned_value(raw: str | None) -> str:
+    value = (raw or "").strip()
     if not value:
         return ""
     if value[0] in {"'", '"'}:
@@ -274,7 +275,15 @@ def assigned_value(raw: str) -> str:
         if end == -1:
             return value[1:].strip()
         return value[1:end].strip()
-    return value.split("#", 1)[0].strip().split(maxsplit=1)[0].rstrip(",") if value else ""
+    return (
+        value.split("#", 1)[0]
+        .strip()
+        .split(maxsplit=1)[0]
+        .rstrip("`.,;)]\"'")
+        .strip()
+        if value
+        else ""
+    )
 
 
 def is_placeholder_secret_value(value: str) -> bool:
@@ -309,11 +318,14 @@ def looks_like_secret_value(value: str) -> bool:
 
 
 def secret_assignment_finding(path: str, line_no: int, line: str) -> Finding | None:
-    match = SECRET_ASSIGNMENT_RE.match(line)
-    if not match or not is_secret_name(match.group("name")):
-        return None
-    value = assigned_value(match.group("value"))
-    if not looks_like_secret_value(value):
+    for match in SECRET_ASSIGNMENT_RE.finditer(line):
+        if not is_secret_name(match.group("name")):
+            continue
+        value = assigned_value(match.group("value"))
+        if not looks_like_secret_value(value):
+            continue
+        break
+    else:
         return None
     excerpt = line.strip()
     if len(excerpt) > 180:
