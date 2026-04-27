@@ -82,7 +82,18 @@ SECRET_ASSIGNMENT_RE = _rx(
     re.I,
 )
 SECRET_VALUE_PREFIX_RE = _rx(
-    r"^(?:sk-(?:live|test)-|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)[A-Za-z0-9_+/\-.=]{8,}$"
+    r"^(?:sk[-_](?:(?:live|test)[-_])?|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)"
+    r"[A-Za-z0-9_+/\-.=]{8,}$"
+)
+RAW_BEARER_TOKEN_RE = _rx(
+    r"(?<![A-Za-z0-9_-])Bearer\s+(?P<value>[A-Za-z0-9_+/\-.=]{12,})(?![A-Za-z0-9_-])",
+    re.I,
+)
+RAW_SECRET_TOKEN_RE = _rx(
+    r"(?<![A-Za-z0-9_+/\-.=])"
+    r"(?P<value>(?:sk[-_](?:(?:live|test)[-_])?|hf_|ghp_|github_pat_|xox[baprs]-|AKIA|AIza|eyJ)"
+    r"[A-Za-z0-9_+/\-.=]{8,})"
+    r"(?![A-Za-z0-9_+/\-.=])"
 )
 PLACEHOLDER_VALUE_RE = _rx(
     r"^(?:<[^>\s]+>|\$\{[A-Za-z_][A-Za-z0-9_]*(?::-[^}]*)?\}|\$[A-Za-z_][A-Za-z0-9_]*|"
@@ -346,6 +357,29 @@ def secret_assignment_finding(path: str, line_no: int, line: str) -> Finding | N
     )
 
 
+def raw_secret_token_finding(path: str, line_no: int, line: str) -> Finding | None:
+    for pattern in (RAW_BEARER_TOKEN_RE, RAW_SECRET_TOKEN_RE):
+        for match in pattern.finditer(line):
+            value = assigned_value(match.group("value"))
+            if looks_like_secret_value(value):
+                break
+        else:
+            continue
+        break
+    else:
+        return None
+    excerpt = line.strip()
+    if len(excerpt) > 180:
+        excerpt = excerpt[:177] + "..."
+    return Finding(
+        "secret-looking raw token",
+        path,
+        line_no,
+        excerpt,
+        "Use placeholders such as <API_KEY>; rotate if this is a real secret.",
+    )
+
+
 def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
     findings: list[Finding] = []
     for rel in paths:
@@ -363,6 +397,9 @@ def line_findings(root: Path, paths: Iterable[Path]) -> list[Finding]:
             secret_finding = secret_assignment_finding(rel_str, line_no, line)
             if secret_finding:
                 findings.append(secret_finding)
+            raw_secret_finding = raw_secret_token_finding(rel_str, line_no, line)
+            if raw_secret_finding:
+                findings.append(raw_secret_finding)
             for rule in LINE_RULES:
                 if rule.pattern.search(line):
                     if rule.name == "machine-local path" and any(

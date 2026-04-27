@@ -138,6 +138,31 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("secret-looking assignment", result.stdout)
 
+    def test_blocks_raw_secret_tokens(self) -> None:
+        bearer_value = "eyJ" + "realisticbearertoken1234567890"
+        hf_value = "hf_" + "realisticsecret123456789"
+        openai_value = "sk-" + "realisticsecret123456789"
+        stripe_value_a = "sk_live_" + "realisticsecret123456789"
+        stripe_value_b = "sk_live-" + "realisticsecret123456789"
+        github_value_a = "ghp_" + "realisticsecret123456789"
+        github_value_b = "github_pat_" + "realisticsecret123456789"
+        fixture = "\n".join(
+            [
+                "Authorization: Bearer " + bearer_value,
+                "Raw token: " + hf_value,
+                "Raw token: " + openai_value,
+                "Raw token: " + stripe_value_a,
+                "Raw token: " + stripe_value_b,
+                "Raw token: " + github_value_a,
+                "Raw token: " + github_value_b,
+            ]
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("secret-looking raw token", result.stdout)
+
     def test_allows_markdown_inline_secret_placeholders(self) -> None:
         fixture = "\n".join(
             [
@@ -152,6 +177,28 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
                 "- VOSCRIPT_API_KEY: `your-api-key`",
                 "Write `TOKEN=`REDACTED``.",
                 "Leave `api_key: `` blank.",
+            ]
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_allows_raw_secret_placeholders(self) -> None:
+        fixture = "\n".join(
+            [
+                "Authorization: Bearer <API_KEY>",
+                "Authorization: Bearer ${API_KEY}",
+                "Authorization: Bearer your-api-key",
+                "Authorization: Bearer REDACTED",
+                "Authorization: Bearer changeme",
+                "Authorization: Bearer abc",
+                "Raw token: <API_KEY>",
+                "Raw token: ${API_KEY}",
+                "Raw token: your-api-key",
+                "Raw token: REDACTED",
+                "Raw token: changeme",
+                "Raw token:",
             ]
         )
 
