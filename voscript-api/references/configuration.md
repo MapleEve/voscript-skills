@@ -24,6 +24,41 @@
 如不确定端口，检查 VoScript 部署端的 `docker-compose.yml` 中 `ports`
 条目，以及 `app/main.py` 中 `uvicorn` 启动配置。
 
+## VoScript 0.7.5 运行时默认值摘要
+
+以下是 operator 排障时最容易影响行为的服务端默认值。技能脚本仍只需要
+`VOSCRIPT_URL` / `VOSCRIPT_API_KEY`；不要把服务端 env 当作脚本参数传入。
+
+| 服务端配置 | 0.7.5 默认 | 排障口径 |
+| ---------- | ---------- | -------- |
+| `DEVICE` | `cuda` | CPU/macOS/无 NVIDIA 环境设为 `cpu`；`cuda` 会在各模型 lazy load 时选择最佳可见 GPU |
+| `CUDA_VISIBLE_DEVICES` | 未设置 | compose 默认不注入该变量并请求所有 Docker 暴露的 GPU；限制可见卡需本地 override 或显式 operator env |
+| `MODEL_IDLE_TIMEOUT_SEC` | `180` | GPU 模型空闲 180 秒后卸载；设为 `0` 可关闭 idle unload |
+| `WHISPER_MODEL` | `large-v3` | 小显存、CPU 或 macOS 部署通常改为 `medium` |
+| `DENOISE_MODEL` | `none` | 省略 API `denoise_model` 时继承服务端默认；显式 `none` 只关闭本次任务降噪 |
+| `DENOISE_SNR_THRESHOLD` | `10.0` | 只作用于 DeepFilterNet SNR gate；`noisereduce` 不按该 gate 跳过 |
+| `VOICEPRINT_THRESHOLD` | `0.75` | raw cosine 基础阈值；AS-norm 激活后会按 z-score 和候选样本状态动态判断 |
+| `PYANNOTE_MIN_DURATION_OFF` | `0.5` | pyannote 短停顿合并参数 |
+| `MIN_EMBED_DURATION` / `MAX_EMBED_DURATION` | `1.5` / `10.0` | 声纹 embedding 片段窗口 |
+| `FFMPEG_TIMEOUT_SEC` | `1800` | ffmpeg 转码超时；超时通常返回 504 |
+
+0.7.5 中 ASR / faster-whisper、diarization / pyannote、embedding / WeSpeaker
+会分别在自身 lazy load 时选择设备；不要假设一个 pipeline-level device 会被三类模型共享。
+如果日志显示 faster-whisper 不支持 `cuda:0`，优先确认部署是否包含 0.7.5 的
+`device="cuda"` + `device_index` 修复。
+
+pyannote 本地缓存排障时，完整 Hugging Face snapshot 应能生成 runtime-localized
+config，并让内嵌 segmentation / embedding 指向本地权重。缓存不完整时会回退
+Hub repo id 或在缺失本地工件时明确失败。公开报告中只写“local snapshot”或
+“internal live validation”，不要写真实缓存路径。
+
+## 远端排查口径
+
+远端排查只使用 `remote-debugging.md` 记录的 documented direct SSH alias /
+WAN ProxyCommand flow。公开文档、PR 或 release note 中只能保留这种抽象说法；
+真实 alias、host、port、token、key、远端路径、job id、speaker id 和日志都必须
+留在本地 ignored 配置或私有记录里。
+
 ## 获取 / 配置 API Key
 
 VoScript 使用静态 API Key 做鉴权，请求必须通过 Header 传入。

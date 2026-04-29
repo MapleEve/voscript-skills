@@ -46,7 +46,7 @@ sample_spread 如何解读。
 
 ## Cohort 生命周期与使用建议
 
-AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.3 中它已经变成
+AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.5 中它已经变成
 **持久化 + direct-load + 后台自动 rebuild** 的生命周期：
 
 - **启动时**：若磁盘上已有 `asnorm_cohort.npy`，服务会直接加载；否则从历史转写构建一次。
@@ -79,6 +79,23 @@ scoped safe globals 才能可信加载：
 - 不要为了绕过错误改成 `weights_only=False`。
 - 不要使用全局 `add_safe_globals` 污染整个进程。
 - 不要加入未验证的额外类；新增类必须先确认来源和必要性。
+
+## pyannote 本地 snapshot 加载（0.7.5）
+
+0.7.5 修复了本地 Hugging Face snapshot 的嵌套模型解析：当 diarization
+snapshot 完整存在时，服务会生成 runtime-localized config，使其中的
+segmentation / embedding 子模型也指向本地权重文件。这样 warm deployment 可以
+优先使用已有缓存，而不是因为配置里仍写 Hub repo id 就重复联网下载。
+
+排障时按以下顺序判断：
+
+1. 本地 snapshot 完整 → 应使用 localized config 走本地权重。
+2. 缓存不存在或不完整 → 允许回退 Hub repo id。
+3. 配置声明本地 snapshot 但缺少必要权重 → 应在加载前明确失败，而不是产生
+   隐晦的 pyannote 栈回溯。
+
+公开报告只写“local snapshot load path verified”或“internal live validation”。
+不要公开真实缓存路径、token、host、日志、job ID 或 speaker ID。
 
 ## sample_spread 解释
 
@@ -121,7 +138,8 @@ scoped safe globals 才能可信加载：
 4. 用第二段提交新的 probe 转写，等待完成。
 5. 检查 `speaker_map` 或 segment 字段中 `matched_id` 是否等于刚注册的
    `speaker_id`，且 `similarity` 是有限数值。cohort 足够大时该值是无界
-   AS-norm z-score，不是百分比。
+   AS-norm z-score，不是百分比；cohort 少于 10 时仍是 raw cosine fallback，
+   不能声称完成了完整 AS-norm 评分路径验证。
 6. 测试结束后删除临时 voiceprint；如不希望 UI 留下历史残影，也删除对应
    probe/enroll transcription artifacts。
 
