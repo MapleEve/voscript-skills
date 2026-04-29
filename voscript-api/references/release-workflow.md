@@ -28,7 +28,8 @@ Use this workflow when preparing a VoScript main-repository PR, release, or Dock
 9. Merge using the repository's existing merge style.
 10. Create the GitHub release/tag only after the merge commit is known.
 11. Watch the Docker release workflow until it finishes. Report image tags and digests when available.
-12. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
+12. Complete the post-release local checkout sync checklist below.
+13. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
 
 ## Remote deploy verification
 
@@ -81,6 +82,32 @@ For VoScript 0.7.x, expected public tags are:
 
 If both `push tag` and `release published` workflows run for the same commit, treat them as duplicate publications of the same source. Wait for completion and report both if they differ.
 
+## Post-release local checkout sync
+
+After a release is published, the operator's durable local checkouts must be
+aligned with the released `origin/main` state before the release is considered
+closed.
+
+1. Inspect the main local checkout for each repository touched by the release,
+   including the VoScript main repository and the `voscript-skills` source
+   repository when skill docs or scripts changed.
+2. For each checkout, record the current branch, upstream, HEAD commit,
+   cleanliness, ahead/behind count, and tag-fetch status before changing
+   anything.
+3. If the checkout is clean and only behind `origin/main`, update it with
+   `git pull --ff-only` or an equivalent fast-forward-only operation.
+4. If the checkout is dirty, ahead, divergent, or has local tag conflicts, do
+   not reset, force-pull, delete tags, or discard changes. First create a
+   recoverable backup such as a local branch, patch, or stash as appropriate,
+   then report the state and use only a safe fast-forward or non-destructive
+   merge path. If the safe path is unclear, stop for operator confirmation.
+5. Confirm the final local main checkout matches `origin/main` after the release
+   PR/merge is complete. If a local backup branch, stash, patch, or unresolved
+   tag conflict remains, report it explicitly in the release close-out notes.
+6. Do not delete runtime data, ignored validation outputs, persisted
+   voiceprints, model caches, or AS-norm cohort state during local checkout
+   alignment unless the operator explicitly asks.
+
 ## Post-release local wrap-up checklist
 
 After release publication is complete, do not leave local-only validation material in a feature worktree that is about to be deleted.
@@ -88,7 +115,9 @@ After release publication is complete, do not leave local-only validation materi
 1. Read-only inspect both the main worktree and the feature worktree before changing anything:
    - In the main worktree, check branch, upstream, cleanliness, and whether it is ahead/behind or divergent.
    - In the feature worktree, check tracked changes, untracked files, and ignored files.
-2. If the main worktree is dirty, ahead/behind, or divergent, do not automatically pull, rebase, merge, or reset it. Report the state and wait for the operator's decision.
+2. If the main worktree is dirty, ahead, divergent, or has tag conflicts, follow
+   the post-release local checkout sync checklist above before making changes.
+   Do not reset, force-pull, delete tags, or discard local edits.
 3. Identify feature-worktree ignored artifacts that must be retained, such as validation outputs, private planning notes, release scratch files, and command logs.
 4. Move retained local-only material into the repository's agreed ignored local-only archive.
 5. Before moving files, confirm the main worktree's `.gitignore` covers the destination path and file patterns. If it does not, update the ignore rules first and verify the files remain untracked.
