@@ -7,7 +7,7 @@ description: |
 license: SEE LICENSE IN LICENSE
 metadata:
   author: MapleEve
-  version: 1.2.3
+  version: 1.2.4
   homepage: https://github.com/MapleEve/voscript-skills
   tags:
     - transcription
