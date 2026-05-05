@@ -7,7 +7,7 @@ description: |
 license: SEE LICENSE IN LICENSE
 metadata:
   author: MapleEve
-  version: 1.2.4
+  version: 1.2.5
   homepage: https://github.com/MapleEve/voscript-skills
   tags:
     - transcription
@@ -87,6 +87,9 @@ HTTP 工作流仍是提交任务、轮询、取结果、管理声纹和导出文
   回退 Hub repo id，缺失本地工件会在加载前明确失败。
 - PyTorch 2.6 / pyannote checkpoint 加载继续只使用最小 scoped safe globals，
   不允许改成 `weights_only=False` 或进程级全局 allowlist。
+- `main` 上的后续可观测性补充只增加安全 timing 日志：模型 cold-load / hot-reuse
+  和转写阶段耗时会记录阶段、模型、耗时、数量等聚合字段，不记录文件名、路径、
+  job ID、speaker ID、host、token 或原始日志。
 
 当前稳定 API **不承诺** provider preset/API 参数化选择、streaming/live session、
 或完整 speaker memory 产品化。如果用户询问这些能力，应说明它们属于后续版本，
