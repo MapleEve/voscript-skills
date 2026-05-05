@@ -88,6 +88,30 @@ After a release is published, the operator's durable local checkouts must be
 aligned with the released `origin/main` state before the release is considered
 closed.
 
+This is a hard gate for every release, merge, or post-release close-out. It is
+not enough to sync only the primary `main` checkout. Before deleting branches,
+worktrees, or local-only material, inspect the complete local and GitHub state:
+
+- GitHub open PRs for the repository, including PRs whose branch name looks
+  stale or superseded.
+- Every sibling git worktree for the repository, including historical release,
+  docs, fix, and scratch worktrees outside the primary checkout.
+- `git stash list` in the repository.
+- Local branches with upstream, ahead/behind, divergence, and unpushed commits.
+- Remote-tracking branches whose upstream is gone.
+- Tag fetch state, including local tag conflicts.
+- For `voscript-skills` changes, the source skill tree and every locally
+  installed skill tree that must be kept in sync. Ignore installer metadata such
+  as `.install.json` when comparing installed skill content.
+
+If any open PR, worktree, stash, local branch, or gone remote-tracking branch
+contains effective code or documentation that has not been merged into the
+released line, stop cleanup and close that work first through the repository's
+normal PR or merge path. Only clear branches, worktrees, or stashes after they
+are proven replaced by the released line, intentionally abandoned by the
+operator, or migrated into an agreed ignored local-only archive. Do not treat
+"branch looks old" or "main is current" as proof that the work is disposable.
+
 1. Inspect the main local checkout for each repository touched by the release,
    including the VoScript main repository and the `voscript-skills` source
    repository when skill docs or scripts changed.
@@ -107,6 +131,10 @@ closed.
 6. Do not delete runtime data, ignored validation outputs, persisted
    voiceprints, model caches, or AS-norm cohort state during local checkout
    alignment unless the operator explicitly asks.
+7. Confirm the final close-out report lists each gate above and its result:
+   GitHub open PRs, sibling worktrees, stash list, local branches ahead/behind,
+   gone remote-tracking branches, tag-fetch conflicts, source-vs-installed skill
+   diff, and any retained or intentionally discarded local material.
 
 ## Post-release local wrap-up checklist
 
@@ -115,6 +143,9 @@ After release publication is complete, do not leave local-only validation materi
 1. Read-only inspect both the main worktree and the feature worktree before changing anything:
    - In the main worktree, check branch, upstream, cleanliness, and whether it is ahead/behind or divergent.
    - In the feature worktree, check tracked changes, untracked files, and ignored files.
+   - Also enumerate all sibling worktrees, open PRs, stashes, local branches,
+     gone remote-tracking branches, tag-fetch conflicts, and installed skill
+     diffs covered by the post-release local checkout sync gate.
 2. If the main worktree is dirty, ahead, divergent, or has tag conflicts, follow
    the post-release local checkout sync checklist above before making changes.
    Do not reset, force-pull, delete tags, or discard local edits.
@@ -123,6 +154,9 @@ After release publication is complete, do not leave local-only validation materi
 5. Before moving files, confirm the main worktree's `.gitignore` covers the destination path and file patterns. If it does not, update the ignore rules first and verify the files remain untracked.
 6. Do not convert raw logs, job IDs, speaker IDs, hostnames, local paths, corpus names, media filenames, or private planning links into tracked public docs during this wrap-up.
 7. Before deleting the feature worktree, confirm that every retained artifact has been migrated to the main worktree archive or that the operator explicitly confirmed it can be discarded.
+8. The final wrap-up report must explicitly list the result of each required
+   gate and identify any open PR, worktree, stash, branch, gone remote-tracking
+   branch, tag conflict, or installed skill drift that remains.
 
 ## Stop conditions
 
