@@ -171,13 +171,17 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## VoScript 兼容说明
 
-本包同步 VoScript `v0.7.5` 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹，同时 skill 已同步当前运行时默认值和 GPU / 模型生命周期修复：
+本包同步 VoScript `v0.7.6` patch 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹，同时 skill 已同步当前运行时默认值、alignment 隔离、幻觉过滤、embedding 音频读取和依赖基线修复：
 
 - `MODEL_IDLE_TIMEOUT_SEC=180` 表示 GPU 模型默认空闲 3 分钟后卸载；设为 `0` 可让模型常驻。
 - Docker Compose 默认请求 Docker 暴露的所有 NVIDIA GPU，不再注入 `CUDA_VISIBLE_DEVICES=0`；需要限制可见卡时只通过本地 override 或显式 operator env。
 - `DEVICE=cuda` 表示 ASR/faster-whisper、diarization/pyannote、embedding/WeSpeaker 会在各自 lazy load 时分别选择当前可见 GPU 中空闲显存最多的设备；`cuda:0` 等显式索引保持固定。
+- WhisperX forced alignment 默认 `WHISPERX_ALIGN_DEVICE=cpu`，把词级 alignment 与 GPU ASR/diarization/embedding 运行时隔离；只有 operator 明确需要时才设为 `pipeline`、`asr`、`cuda` 或 `cuda:0`。
 - faster-whisper 即使面对内部 torch 设备 `cuda:N`，加载时也会收到 `device="cuda"` 与 `device_index`，避免 unsupported `cuda:0`。
 - pyannote diarization 在完整本地 Hugging Face snapshot 存在时会使用 runtime-localized config，使内嵌 segmentation / embedding 也指向本地权重。
+- ASR guard 会过滤短单段 stock outro 幻觉，例如点赞、订阅、转发、打赏、感谢观看等尾巴标记高度集中的非重复幻觉，同时保留长会议中的正常上下文词。
+- speaker embedding 提取会优先用 `soundfile` 一次性读取规范化 WAV，再按 diarization turn 切片；读取失败时回退 torchaudio 分段加载。
+- 运行时依赖基线从 yanked WhisperX 3.1.x 迁到兼容的非 yanked WhisperX 3.3.1 路径，并收紧相邻依赖边界。
 - 并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数、PyTorch 2.6 checkpoint 安全加载、新声音 AS-norm 验证模式仍适用。
 
 本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于后续版本工作。

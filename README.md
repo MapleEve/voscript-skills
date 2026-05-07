@@ -171,13 +171,17 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ## VoScript Compatibility
 
-This package tracks VoScript `v0.7.5` behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints, while the skill now reflects the current runtime defaults and GPU/model lifecycle fixes:
+This package tracks VoScript `v0.7.6` patch behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints, while the skill now reflects the current runtime defaults, alignment isolation, hallucination guard, embedding audio loading, and dependency-baseline fixes:
 
 - `MODEL_IDLE_TIMEOUT_SEC=180` unloads loaded GPU models after 3 idle minutes; set `0` to keep models resident.
 - Docker Compose requests every Docker-exposed NVIDIA GPU by default and does not inject `CUDA_VISIBLE_DEVICES=0`; restrict visibility only with a local override or explicit operator env.
 - `DEVICE=cuda` lets ASR/faster-whisper, diarization/pyannote, and embedding/WeSpeaker each choose the visible GPU with the most free memory during its own lazy load; indexed values such as `cuda:0` remain pinned.
+- WhisperX forced alignment defaults to `WHISPERX_ALIGN_DEVICE=cpu`, isolating word-level alignment from the GPU ASR/diarization/embedding runtime; opt into `pipeline`, `asr`, `cuda`, or `cuda:0` only as an explicit operator override.
 - faster-whisper receives `device="cuda"` plus `device_index` even when the internal torch device is `cuda:N`, avoiding unsupported `cuda:0` loads.
 - pyannote diarization uses runtime-localized configs for complete local Hugging Face snapshots, so nested segmentation and embedding models also resolve to local weights.
+- The ASR guard now filters short stock-outro hallucinations dominated by like/subscribe/share/donation/watch-ending markers, while preserving normal long-form meeting context.
+- Speaker embedding extraction now reads the normalized WAV once through `soundfile` and slices by diarization turns, with a torchaudio segment-load fallback if that read fails.
+- The runtime dependency baseline moves off the yanked WhisperX 3.1.x line to the compatible non-yanked WhisperX 3.3.1 path with bounded adjacent dependencies.
 - The existing notes on in-flight dedup polling, persisted AS-norm cohorts, unbounded AS-norm scores, PyTorch 2.6 checkpoint-safe loading, and new-voice AS-norm validation still apply.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.

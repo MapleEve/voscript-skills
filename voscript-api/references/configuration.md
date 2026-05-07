@@ -24,33 +24,54 @@
 如不确定端口，检查 VoScript 部署端的 `docker-compose.yml` 中 `ports`
 条目，以及 `app/main.py` 中 `uvicorn` 启动配置。
 
-## VoScript 0.7.5 运行时默认值摘要
+## VoScript 0.7.6 运行时默认值摘要
 
 以下是 operator 排障时最容易影响行为的服务端默认值。技能脚本仍只需要
 `VOSCRIPT_URL` / `VOSCRIPT_API_KEY`；不要把服务端 env 当作脚本参数传入。
 
-| 服务端配置 | 0.7.5 默认 | 排障口径 |
+| 服务端配置 | 0.7.6 默认 | 排障口径 |
 | ---------- | ---------- | -------- |
 | `DEVICE` | `cuda` | CPU/macOS/无 NVIDIA 环境设为 `cpu`；`cuda` 会在各模型 lazy load 时选择最佳可见 GPU |
 | `CUDA_VISIBLE_DEVICES` | 未设置 | compose 默认不注入该变量并请求所有 Docker 暴露的 GPU；限制可见卡需本地 override 或显式 operator env |
 | `MODEL_IDLE_TIMEOUT_SEC` | `180` | GPU 模型空闲 180 秒后卸载；设为 `0` 可关闭 idle unload |
 | `WHISPER_MODEL` | `large-v3` | 小显存、CPU 或 macOS 部署通常改为 `medium` |
+| `WHISPERX_ALIGN_DEVICE` | `cpu` | forced alignment 默认跑 CPU，与 GPU ASR / diarization / embedding 隔离；确认稳定后才显式设为 `pipeline` / `asr` / `cuda` / `cuda:0` |
+| `WHISPERX_ALIGN_DISABLED_LANGUAGES` | 空 | 逗号分隔的显式跳过 alignment 语言，只建议作为临时降级开关 |
+| `WHISPERX_ALIGN_MODEL_MAP` | 空 | 逗号分隔的 `lang=model` 覆盖；公开文档只写占位模型名 |
+| `WHISPERX_ALIGN_MODEL_DIR` | 空 | 可选 alignment 模型目录；只在当前 WhisperX 支持时透传，公开报告不得写真实路径 |
+| `WHISPERX_ALIGN_CACHE_ONLY` | `0` | 设为 `1` 时请求 WhisperX 只从缓存加载；只在当前 WhisperX 支持时透传 |
 | `DENOISE_MODEL` | `none` | 省略 API `denoise_model` 时继承服务端默认；显式 `none` 只关闭本次任务降噪 |
 | `DENOISE_SNR_THRESHOLD` | `10.0` | 只作用于 DeepFilterNet SNR gate；`noisereduce` 不按该 gate 跳过 |
 | `VOICEPRINT_THRESHOLD` | `0.75` | raw cosine 基础阈值；AS-norm 激活后会按 z-score 和候选样本状态动态判断 |
+| `EMBEDDING_DIM` | `256` | 声纹库和 AS-norm cohort 的向量维度；不同维度的既有库不要混用 |
 | `PYANNOTE_MIN_DURATION_OFF` | `0.5` | pyannote 短停顿合并参数 |
 | `MIN_EMBED_DURATION` / `MAX_EMBED_DURATION` | `1.5` / `10.0` | 声纹 embedding 片段窗口 |
 | `FFMPEG_TIMEOUT_SEC` | `1800` | ffmpeg 转码超时；超时通常返回 504 |
+| `JOBS_MAX_CACHE` | `200` | 内存 job LRU 上限；被淘汰的完成任务仍可从磁盘状态/结果查询 |
 
-0.7.5 中 ASR / faster-whisper、diarization / pyannote、embedding / WeSpeaker
+0.7.6 中 ASR / faster-whisper、diarization / pyannote、embedding / WeSpeaker
 会分别在自身 lazy load 时选择设备；不要假设一个 pipeline-level device 会被三类模型共享。
-如果日志显示 faster-whisper 不支持 `cuda:0`，优先确认部署是否包含 0.7.5 的
+如果日志显示 faster-whisper 不支持 `cuda:0`，优先确认部署是否包含当前 0.7.x 的
 `device="cuda"` + `device_index` 修复。
+
+WhisperX forced alignment 从 `0.7.6` 开始默认 `WHISPERX_ALIGN_DEVICE=cpu`，
+避免 alignment 与 GPU ASR、diarization、embedding 抢占同一 CUDA 运行时。需要 CUDA
+alignment 时必须由 operator 显式设置 `pipeline`、`asr`、`cuda` 或 `cuda:0`。
+客户端仍必须把 `segments[].words` 和顶层 `alignment` 当作可选字段。
 
 pyannote 本地缓存排障时，完整 Hugging Face snapshot 应能生成 runtime-localized
 config，并让内嵌 segmentation / embedding 指向本地权重。缓存不完整时会回退
 Hub repo id 或在缺失本地工件时明确失败。公开报告中只写“local snapshot”或
 “internal live validation”，不要写真实缓存路径。
+
+ASR hallucination guard 从 `0.7.6` 起会额外过滤短单段 stock outro 幻觉，例如多个
+点赞、订阅、转发、打赏、感谢观看类标记高度集中时的非重复尾巴。公开排障只写
+过滤状态、段数、时长等聚合信息，不贴真实转写文本或原始日志。
+
+embedding 阶段从 `0.7.6` 起优先用 `soundfile` 一次性读取规范化 WAV，再按
+diarization turn 切片；读取失败时回退旧的 torchaudio 分段加载。安全 timing 日志可包含
+backend、elapsed、sample_rate、channels、frames、speaker_count、chunk_count，
+不得包含文件名、路径、job ID、speaker ID、host、token 或原始验证日志。
 
 ## 远端排查口径
 

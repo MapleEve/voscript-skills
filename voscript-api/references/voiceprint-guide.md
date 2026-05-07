@@ -46,7 +46,7 @@ sample_spread 如何解读。
 
 ## Cohort 生命周期与使用建议
 
-AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在 0.7.1+ / 0.7.5 中它已经变成
+AS-norm 的效果依赖一个代表性 cohort（对比样本集），但在当前 0.7.x 中它已经变成
 **持久化 + direct-load + 后台自动 rebuild** 的生命周期：
 
 - **启动时**：若磁盘上已有 `asnorm_cohort.npy`，服务会直接加载；否则从历史转写构建一次。
@@ -80,9 +80,9 @@ scoped safe globals 才能可信加载：
 - 不要使用全局 `add_safe_globals` 污染整个进程。
 - 不要加入未验证的额外类；新增类必须先确认来源和必要性。
 
-## pyannote 本地 snapshot 加载（0.7.5）
+## pyannote 本地 snapshot 加载（当前 0.7.x）
 
-0.7.5 修复了本地 Hugging Face snapshot 的嵌套模型解析：当 diarization
+当前 0.7.x 修复了本地 Hugging Face snapshot 的嵌套模型解析：当 diarization
 snapshot 完整存在时，服务会生成 runtime-localized config，使其中的
 segmentation / embedding 子模型也指向本地权重文件。这样 warm deployment 可以
 优先使用已有缓存，而不是因为配置里仍写 Hub repo id 就重复联网下载。
