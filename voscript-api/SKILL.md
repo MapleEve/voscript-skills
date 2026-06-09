@@ -7,7 +7,7 @@ description: |
 license: SEE LICENSE IN LICENSE
 metadata:
   author: MapleEve
-  version: 1.2.7
+  version: 1.2.8
   homepage: https://github.com/MapleEve/voscript-skills
   tags:
     - transcription
@@ -62,14 +62,15 @@ VoScript 是一个自托管的语音转写服务，支持多说话人分离、�
 > 重要：本技能与代理无关（agent-agnostic），同等适用于 Claude、Codex、
 > Trae、Hermes、OpenClaw 等任何 AI 代理，不依赖任何厂商专属特性。
 
-## 0.7.6 兼容说明
+## 0.8.4 兼容说明
 
-本技能包同步 VoScript `v0.7.6` patch 的公开行为与排障口径。对调用方来说，
-核心 HTTP 工作流仍是提交任务、轮询、取结果、管理声纹和导出文件；`0.7.6`
-主要补齐 forced alignment 运行时隔离、ASR 幻觉过滤、embedding 音频读取路径、
-依赖基线和运行时默认值说明，不要求客户端改变既有 API 调用方式。
+本技能包同步 VoScript `v0.8.4` 的公开行为与排障口径。对调用方来说，
+核心 HTTP 工作流仍是提交任务、轮询、取结果、管理声纹和导出文件；`0.8.4`
+主要补齐 Rust kernel foundation、发布镜像 wheel 打包、forced alignment 运行时隔离、
+ASR 幻觉过滤、embedding 音频读取路径、依赖基线和运行时默认值说明，不要求客户端改变
+既有 API 调用方式。
 
-`0.7.6` 关键默认值和修复：
+`0.8.4` 关键默认值和修复：
 
 - `MODEL_IDLE_TIMEOUT_SEC=180`：默认 180 秒 GPU 空闲后卸载已加载模型；
   设置为 `0` 可关闭空闲卸载并让模型常驻。
@@ -99,6 +100,8 @@ VoScript 是一个自托管的语音转写服务，支持多说话人分离、�
 - 依赖基线从 yanked WhisperX 3.1.x 迁到非 yanked WhisperX 3.3.1 兼容线，
   并收紧 pyannote / faster-whisper / pandas 等运行时边界；这属于服务端部署行为，
   不新增客户端 API 参数。
+- `RUST_KERNEL_MODE` 默认为 `off`；发布镜像会携带 `voscript_core` wheel，
+  Rust kernel bridge 先作为可验证 foundation / release gate 存在，不改变稳定 HTTP API。
 - 可观测性只增加安全 timing 日志：模型 cold-load / hot-reuse 和转写阶段耗时会记录
   阶段、模型、耗时、数量、采样率、语言、设备等聚合字段，不记录文件名、路径、
   job ID、speaker ID、host、token 或原始日志。
@@ -562,7 +565,7 @@ curl -X POST "$VOSCRIPT_URL/api/voiceprints/rebuild-cohort" \
 | `skipped` | int | 被跳过的样本数（质量不达标或重复） |
 | `saved_to` | string | cohort 文件保存路径 |
 
-> 💡 **cohort 生命周期（当前 0.7.x）**
+> 💡 **cohort 生命周期（当前 0.8.x）**
 >
 > - 服务启动时会优先 direct-load 已持久化 cohort；若文件不存在则从历史转写构建一次
 > - 每次 enroll / update 后会置脏，后台线程每 60 秒检查一次，并在默认 30 秒防抖后自动重建
@@ -613,26 +616,26 @@ VoScript 返回标准 HTTP 状态码，代理在处理响应时应按下表做�
 11. **PyTorch 2.6 / pyannote**：checkpoint 加载只使用 `voiceprint-guide.md`
     记录的最小 scoped safe globals；禁止改成 `weights_only=False` 或全局
     `add_safe_globals`。
-12. **GPU 模型生命周期（0.7.6）**：默认 `MODEL_IDLE_TIMEOUT_SEC=180` 会在
+12. **GPU 模型生命周期（0.8.4）**：默认 `MODEL_IDLE_TIMEOUT_SEC=180` 会在
     GPU 串行运行时持续空闲后卸载模型；如下一次任务慢，先判断是否是正常 lazy reload。
     如果需要常驻模型，设置 `MODEL_IDLE_TIMEOUT_SEC=0`。
-13. **多 GPU 默认（0.7.6）**：compose 默认暴露所有 Docker 可用 GPU，`DEVICE=cuda`
+13. **多 GPU 默认（0.8.4）**：compose 默认暴露所有 Docker 可用 GPU，`DEVICE=cuda`
     会让 ASR、diarization、embedding 分别在 lazy load 时选空闲显存最多的可见卡。
     如果需要锁定或限制 GPU，使用本地 compose override / operator env，而不是把真实
     主机或路径写进公开文档。
-14. **faster-whisper 设备参数（0.7.6）**：内部 torch device 可以是 `cuda:N`，
+14. **faster-whisper 设备参数（0.8.4）**：内部 torch device 可以是 `cuda:N`，
     但 faster-whisper 加载应收到 `device="cuda"` 和 `device_index=N`。
     若日志出现 unsupported CUDA device，优先检查部署版本是否已包含该修复。
-15. **pyannote 本地 snapshot（0.7.6）**：完整本地 snapshot 应能生成 localized
+15. **pyannote 本地 snapshot（0.8.4）**：完整本地 snapshot 应能生成 localized
     config 并指向本地 segmentation / embedding 权重；缺失工件会明确失败。不要把
     真实缓存路径写入公开报告。
-16. **WhisperX alignment（0.7.6）**：默认 `WHISPERX_ALIGN_DEVICE=cpu`，用于把
+16. **WhisperX alignment（0.8.4）**：默认 `WHISPERX_ALIGN_DEVICE=cpu`，用于把
     forced alignment 与 GPU ASR/diarization/embedding 隔离。`pipeline`、`asr`、
     `cuda`、`cuda:0` 只作为显式 operator override。`segments[].words` 和顶层
     `alignment` 仍是可选字段，失败或跳过不等于任务失败。
-17. **ASR outro 幻觉过滤（0.7.6）**：短单段 stock outro 标记被聚合过滤；公开报告
+17. **ASR outro 幻觉过滤（0.8.4）**：短单段 stock outro 标记被聚合过滤；公开报告
     只描述过滤行为和聚合计数，不贴真实文本、文件名或原始日志。
-18. **embedding 音频读取（0.7.6）**：优先一次性 `soundfile` 读取规范化 WAV 后切片，
+18. **embedding 音频读取（0.8.4）**：优先一次性 `soundfile` 读取规范化 WAV 后切片，
     失败时回退 torchaudio 分段加载；排障看安全的 `embedding_audio_load_timing` /
     `embedding_processing_timing` 聚合字段。
 19. **容器日志**：`docker logs voscript` 查看详细栈回溯

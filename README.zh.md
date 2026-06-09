@@ -171,7 +171,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## VoScript 兼容说明
 
-本包同步 VoScript `v0.7.6` patch 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹，同时 skill 已同步当前运行时默认值、alignment 隔离、幻觉过滤、embedding 音频读取和依赖基线修复：
+本包同步 VoScript `v0.8.4` 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹，同时 skill 已同步当前运行时默认值、Rust kernel foundation、发布镜像 wheel 打包、alignment 隔离、幻觉过滤、embedding 音频读取和依赖基线修复：
 
 - `MODEL_IDLE_TIMEOUT_SEC=180` 表示 GPU 模型默认空闲 3 分钟后卸载；设为 `0` 可让模型常驻。
 - Docker Compose 默认请求 Docker 暴露的所有 NVIDIA GPU，不再注入 `CUDA_VISIBLE_DEVICES=0`；需要限制可见卡时只通过本地 override 或显式 operator env。
@@ -182,6 +182,7 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 - ASR guard 会过滤短单段 stock outro 幻觉，例如点赞、订阅、转发、打赏、感谢观看等尾巴标记高度集中的非重复幻觉，同时保留长会议中的正常上下文词。
 - speaker embedding 提取会优先用 `soundfile` 一次性读取规范化 WAV，再按 diarization turn 切片；读取失败时回退 torchaudio 分段加载。
 - 运行时依赖基线从 yanked WhisperX 3.1.x 迁到兼容的非 yanked WhisperX 3.3.1 路径，并收紧相邻依赖边界。
+- 发布 Docker 镜像包含 `voscript_core` wheel；`RUST_KERNEL_MODE` 默认仍为 `off`，因此 Rust kernel bridge 先作为可验证 foundation / release gate 路径存在，不改变稳定 HTTP API。
 - 并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数、PyTorch 2.6 checkpoint 安全加载、新声音 AS-norm 验证模式仍适用。
 
 本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于后续版本工作。

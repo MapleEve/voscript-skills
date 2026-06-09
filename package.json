@@ -1,6 +1,6 @@
 {
   "name": "voscript-skills",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "VoScript API skill package for AI agents — agent-agnostic helpers for transcription, voiceprint management, and export",
   "keywords": [
     "voscript",
@@ -19,6 +19,11 @@
   "author": "Maple (MapleEve)",
   "bin": {
     "voscript-skills": "bin/install.js"
+  },
+  "scripts": {
+    "public-scan": "python voscript-api/scripts/public_release_scan.py --root .",
+    "test": "python -m unittest discover -s tests -v",
+    "pack:dry": "npm pack --dry-run --json"
   },
   "files": [
     "bin/install.js",

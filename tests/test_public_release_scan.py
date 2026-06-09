@@ -15,13 +15,16 @@ def run_git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, stdout=subprocess.PIPE)
 
 
-def run_scan_with(content: str) -> subprocess.CompletedProcess[str]:
+def run_scan_with(
+    content: str, filename: str = "fixture.md"
+) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         run_git(root, "init", "-q")
-        fixture = root / "fixture.md"
+        fixture = root / filename
+        fixture.parent.mkdir(parents=True, exist_ok=True)
         fixture.write_text(content, encoding="utf-8")
-        run_git(root, "add", "fixture.md")
+        run_git(root, "add", filename)
         return subprocess.run(
             [sys.executable, str(SCANNER), "--root", str(root)],
             check=False,
@@ -32,6 +35,33 @@ def run_scan_with(content: str) -> subprocess.CompletedProcess[str]:
 
 
 class PublicReleaseSecretScanTests(unittest.TestCase):
+    def test_blocks_any_tracked_local_override_doc(self) -> None:
+        local_suffix = "." + "local" + ".md"
+        for filename in (
+            "AGENTS" + local_suffix,
+            "CLAUDE" + local_suffix,
+            "docs/release" + local_suffix,
+        ):
+            with self.subTest(filename=filename):
+                result = run_scan_with("local-only operator notes", filename=filename)
+
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("tracked local override/config file", result.stdout)
+
+    def test_blocks_public_references_to_local_override_docs(self) -> None:
+        local_suffix = "." + "local" + ".md"
+        fixture = "\n".join(
+            [
+                "Keep operator details in AGENTS" + local_suffix + ".",
+                "Do not publish docs/release" + local_suffix + ".",
+            ]
+        )
+
+        result = run_scan_with(fixture)
+
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("local override doc", result.stdout)
+
     def test_blocks_real_looking_env_style_secret_assignments(self) -> None:
         synthetic_value_a = "sk-live-" + "realisticsecret123456789"
         synthetic_value_b = "hf_" + "realisticsecret123456789"
