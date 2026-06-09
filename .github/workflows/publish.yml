@@ -22,6 +22,19 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Public release scan
+        run: npm run public-scan
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Package dry run
+        run: npm run pack:dry
+
       - name: Check version changed
         id: version
         run: |

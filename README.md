@@ -171,7 +171,7 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ## VoScript Compatibility
 
-This package tracks VoScript `v0.7.6` patch behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints, while the skill now reflects the current runtime defaults, alignment isolation, hallucination guard, embedding audio loading, and dependency-baseline fixes:
+This package tracks VoScript `v0.8.4` behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints, while the skill now reflects the current runtime defaults, Rust kernel foundation, release-image wheel packaging, alignment isolation, hallucination guard, embedding audio loading, and dependency-baseline fixes:
 
 - `MODEL_IDLE_TIMEOUT_SEC=180` unloads loaded GPU models after 3 idle minutes; set `0` to keep models resident.
 - Docker Compose requests every Docker-exposed NVIDIA GPU by default and does not inject `CUDA_VISIBLE_DEVICES=0`; restrict visibility only with a local override or explicit operator env.
@@ -182,6 +182,7 @@ This package tracks VoScript `v0.7.6` patch behavior. The public workflow remain
 - The ASR guard now filters short stock-outro hallucinations dominated by like/subscribe/share/donation/watch-ending markers, while preserving normal long-form meeting context.
 - Speaker embedding extraction now reads the normalized WAV once through `soundfile` and slices by diarization turns, with a torchaudio segment-load fallback if that read fails.
 - The runtime dependency baseline moves off the yanked WhisperX 3.1.x line to the compatible non-yanked WhisperX 3.3.1 path with bounded adjacent dependencies.
+- Published Docker images include the `voscript_core` wheel. `RUST_KERNEL_MODE` remains `off` by default, so the Rust kernel bridge is a verified foundation/release-gate path without changing the stable HTTP API.
 - The existing notes on in-flight dedup polling, persisted AS-norm cohorts, unbounded AS-norm scores, PyTorch 2.6 checkpoint-safe loading, and new-voice AS-norm validation still apply.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.

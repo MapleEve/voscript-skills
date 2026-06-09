@@ -40,8 +40,15 @@ tmp/
 
 # Local secrets / operator config
 CLAUDE.local.md
+*.local.md
+AGENTS.local.md
 .env
 .env.*
 !.env.example
 *.key
 *.pem
+
+# Local review/worktree scratch
+.full-review/
+.full-review-archive/
+.worktrees/

@@ -74,7 +74,8 @@ PRIVATE_DIRECT_SSH_ALIAS = "a" + "i"
 PRIVATE_WAN_SSH_ALIAS = PRIVATE_DIRECT_SSH_ALIAS + "-" + "wan"
 PRIVATE_REMOTE_ALIASES = (PRIVATE_DIRECT_SSH_ALIAS + "-" + "lan", PRIVATE_WAN_SSH_ALIAS)
 PRIVATE_PROXY_HOST_PORT = "127" + ".0.0.1:" + "78" + "97"
-PRIVATE_LOCAL_CONFIG = "CLAUDE" + ".local.md"
+PRIVATE_LOCAL_DOC_SUFFIX = ".local.md"
+PRIVATE_LOCAL_DOC_RE = _rx(r"(?:^|[/\\])[^/\\]+\.local\.md\b", re.I)
 
 SECRET_ASSIGNMENT_RE = _rx(
     r"(?<![A-Za-z0-9_-])(?:export\s+)?['\"]?(?P<name>[A-Za-z_][A-Za-z0-9_-]*)['\"]?"
@@ -137,9 +138,9 @@ LINE_RULES = [
         "Replace local-only directory paths with generic ignored archive wording.",
     ),
     Rule(
-        "local operator config file",
-        _rx(re.escape(PRIVATE_LOCAL_CONFIG)),
-        "Refer to ignored operator config generically in public docs.",
+        "local override doc",
+        PRIVATE_LOCAL_DOC_RE,
+        "Refer to ignored local override docs generically in public docs.",
     ),
     Rule(
         "local ssh config path",
@@ -229,16 +230,16 @@ def path_findings(paths: Iterable[Path]) -> list[Finding]:
                     "Remove tracked planning/tmp artifacts or move them to ignored local storage.",
                 )
             )
-        if rel.name == "CLAUDE.local.md" or (
+        if rel.name.lower().endswith(PRIVATE_LOCAL_DOC_SUFFIX) or (
             rel.name.startswith(".env") and rel.name != ".env.example"
         ):
             findings.append(
                 Finding(
-                    "tracked local config file",
+                    "tracked local override/config file",
                     rel_str,
                     1,
                     rel_str,
-                    "Untrack local config files and keep them ignored.",
+                    "Untrack local override or config files and keep them ignored.",
                 )
             )
         if suffix in MEDIA_EXTENSIONS:

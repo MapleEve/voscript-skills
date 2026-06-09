@@ -75,7 +75,7 @@ the PR merge/tag/release source is known:
 
 The main repository publishes Docker images through its release workflow. Do not invent another registry or push path.
 
-For VoScript 0.7.x, expected public tags are:
+For VoScript 0.8.x, expected public tags are:
 
 - GHCR: `ghcr.io/mapleeve/voscript:latest` and `ghcr.io/mapleeve/voscript:v<version>`
 - Docker Hub: `<dockerhub-user>/voscript:latest` and `<dockerhub-user>/voscript:<version>`

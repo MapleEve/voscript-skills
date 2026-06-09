@@ -24,12 +24,12 @@
 如不确定端口，检查 VoScript 部署端的 `docker-compose.yml` 中 `ports`
 条目，以及 `app/main.py` 中 `uvicorn` 启动配置。
 
-## VoScript 0.7.6 运行时默认值摘要
+## VoScript 0.8.4 运行时默认值摘要
 
 以下是 operator 排障时最容易影响行为的服务端默认值。技能脚本仍只需要
 `VOSCRIPT_URL` / `VOSCRIPT_API_KEY`；不要把服务端 env 当作脚本参数传入。
 
-| 服务端配置 | 0.7.6 默认 | 排障口径 |
+| 服务端配置 | 0.8.4 默认 | 排障口径 |
 | ---------- | ---------- | -------- |
 | `DEVICE` | `cuda` | CPU/macOS/无 NVIDIA 环境设为 `cpu`；`cuda` 会在各模型 lazy load 时选择最佳可见 GPU |
 | `CUDA_VISIBLE_DEVICES` | 未设置 | compose 默认不注入该变量并请求所有 Docker 暴露的 GPU；限制可见卡需本地 override 或显式 operator env |
@@ -48,13 +48,14 @@
 | `MIN_EMBED_DURATION` / `MAX_EMBED_DURATION` | `1.5` / `10.0` | 声纹 embedding 片段窗口 |
 | `FFMPEG_TIMEOUT_SEC` | `1800` | ffmpeg 转码超时；超时通常返回 504 |
 | `JOBS_MAX_CACHE` | `200` | 内存 job LRU 上限；被淘汰的完成任务仍可从磁盘状态/结果查询 |
+| `RUST_KERNEL_MODE` | `off` | 发布镜像包含 `voscript_core` wheel；默认仍走稳定 Python oracle，显式启用 Rust kernel 前先看 release gate 与回归结果 |
 
-0.7.6 中 ASR / faster-whisper、diarization / pyannote、embedding / WeSpeaker
+0.8.4 中 ASR / faster-whisper、diarization / pyannote、embedding / WeSpeaker
 会分别在自身 lazy load 时选择设备；不要假设一个 pipeline-level device 会被三类模型共享。
-如果日志显示 faster-whisper 不支持 `cuda:0`，优先确认部署是否包含当前 0.7.x 的
+如果日志显示 faster-whisper 不支持 `cuda:0`，优先确认部署是否包含当前 0.8.x 的
 `device="cuda"` + `device_index` 修复。
 
-WhisperX forced alignment 从 `0.7.6` 开始默认 `WHISPERX_ALIGN_DEVICE=cpu`，
+WhisperX forced alignment 从 `0.8.4` 公开基线开始默认 `WHISPERX_ALIGN_DEVICE=cpu`，
 避免 alignment 与 GPU ASR、diarization、embedding 抢占同一 CUDA 运行时。需要 CUDA
 alignment 时必须由 operator 显式设置 `pipeline`、`asr`、`cuda` 或 `cuda:0`。
 客户端仍必须把 `segments[].words` 和顶层 `alignment` 当作可选字段。
@@ -64,11 +65,11 @@ config，并让内嵌 segmentation / embedding 指向本地权重。缓存不完
 Hub repo id 或在缺失本地工件时明确失败。公开报告中只写“local snapshot”或
 “internal live validation”，不要写真实缓存路径。
 
-ASR hallucination guard 从 `0.7.6` 起会额外过滤短单段 stock outro 幻觉，例如多个
+ASR hallucination guard 从 `0.8.4` 公开基线起会额外过滤短单段 stock outro 幻觉，例如多个
 点赞、订阅、转发、打赏、感谢观看类标记高度集中时的非重复尾巴。公开排障只写
 过滤状态、段数、时长等聚合信息，不贴真实转写文本或原始日志。
 
-embedding 阶段从 `0.7.6` 起优先用 `soundfile` 一次性读取规范化 WAV，再按
+embedding 阶段从 `0.8.4` 公开基线起优先用 `soundfile` 一次性读取规范化 WAV，再按
 diarization turn 切片；读取失败时回退旧的 torchaudio 分段加载。安全 timing 日志可包含
 backend、elapsed、sample_rate、channels、frames、speaker_count、chunk_count，
 不得包含文件名、路径、job ID、speaker ID、host、token 或原始验证日志。
