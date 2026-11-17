@@ -19,10 +19,14 @@ main application's Docker publication flow:
    GitHub Release creation has its own contents-write job. Do not remove the
    token or switch authentication modes without verifying registry publisher
    configuration and obtaining operator approval.
-5. Verify the npm version's `gitHead` matches the triggering commit, then create
-   its GitHub Release with an explicit full-SHA `--target`. Never move an
-   existing version tag to a different commit. A retry may complete a missing
-   GitHub Release only when the npm version belongs to that same source SHA.
+5. Verify the npm version's `gitHead` matches the triggering commit. Atomically
+   create its remote Git tag ref at that exact SHA without overwriting any
+   existing ref. On a creation conflict, read the actual remote ref and peel
+   annotated tags to the commit; require an exact match. Create the GitHub
+   Release with `--verify-tag`, then re-read and verify the remote tag even if
+   the Release already existed. A retry skips an already published npm version
+   and repairs a missing tag or Release only for the same source SHA. API
+   errors, missing refs, and mismatched targets block completion; never retag.
 6. Confirm npm publication and the GitHub Release before updating installed
    skill copies. Preserve agent authentication settings and local operator
    configuration; skill installation does not require changing API identities
