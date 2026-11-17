@@ -191,6 +191,10 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## 公开发布检查
 
+技能包 `1.2.9` 在 PR 和正式发布前通过 Node.js 24 CI 运行公开扫描、单元测试和 npm
+打包预检。npm 包与 GitHub Release 绑定同一精确源码提交，校验阶段不接触发布凭据。
+安装技能不会修改代理的鉴权设置。
+
 开 PR、发布文档或整理 live validation 结论前，先运行：
 
 ```bash

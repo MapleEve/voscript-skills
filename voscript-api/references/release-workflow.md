@@ -2,6 +2,36 @@
 
 Use this workflow when preparing a VoScript main-repository PR, release, or Docker publication.
 
+## Skills npm publication
+
+For the `voscript-skills` package, use its repository workflows rather than the
+main application's Docker publication flow:
+
+1. Keep the package version and skill metadata version aligned. Scanner logic
+   fixes require a patch version; documentation-only changes do not.
+2. Pull requests run the public scan, unit tests, and npm package dry run on CI
+   with Node.js 24. The main-branch publication workflow reuses the same checks
+   before any publishing job can start.
+3. Publish only the checked-out triggering commit. Registry lookup errors block
+   publication; they must not be treated as an unpublished package version.
+4. Keep validation read-only. Grant provenance identity permission only to the
+   npm job, and expose the existing `NPM_TOKEN` only to the npm publish step.
+   GitHub Release creation has its own contents-write job. Do not remove the
+   token or switch authentication modes without verifying registry publisher
+   configuration and obtaining operator approval.
+5. Verify the npm version's `gitHead` matches the triggering commit, then create
+   its GitHub Release with an explicit full-SHA `--target`. Never move an
+   existing version tag to a different commit. A retry may complete a missing
+   GitHub Release only when the npm version belongs to that same source SHA.
+6. Confirm npm publication and the GitHub Release before updating installed
+   skill copies. Preserve agent authentication settings and local operator
+   configuration; skill installation does not require changing API identities
+   or enabling a different OAuth provider.
+
+Use the post-release checkout and wrap-up gates below for the skills source
+repository too. Do not report a prepared version as published before CI and
+registry verification complete.
+
 ## Required order
 
 1. Confirm the worktree branch, remote tracking branch, and cleanliness.

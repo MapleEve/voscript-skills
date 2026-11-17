@@ -191,6 +191,11 @@ It does not promise provider preset/API selection, streaming sessions, or full s
 
 ## Public Release Check
 
+Package `1.2.9` runs its public scan, unit tests, and npm package dry run for pull
+requests and again before publication on Node.js 24 CI. npm publication and the
+GitHub Release are tied to the exact source commit; validation has no publishing
+credentials. Installing the skill does not change agent authentication settings.
+
 Before opening a PR, publishing docs, or summarizing live validation, run:
 
 ```bash

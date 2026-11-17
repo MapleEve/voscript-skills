@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Public scan, unit tests, package dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Validate package and skill versions
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const version = require('./package.json').version;
+          const skill = fs.readFileSync('voscript-api/SKILL.md', 'utf8');
+          const frontmatter = skill.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+          const skillVersion = frontmatter?.[1].match(/^  version: (\S+)\s*$/m)?.[1];
+          if (!/^\d+\.\d+\.\d+$/.test(version) || skillVersion !== version) {
+            throw new Error('Package and skill versions must be matching stable SemVer');
+          }
+          NODE
+
+      - name: Public release scan
+        run: npm run public-scan
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Package dry run
+        run: npm run pack:dry
