@@ -48,6 +48,23 @@
 
 第二种情况仍然进入已有 job 的状态机，客户端必须继续轮询。
 
+## 新任务接纳与 503
+
+VoScript `0.8.5` 在上传并计算 hash 后，先复用已完成结果或已有 in-flight 任务，
+再对新任务检查以下默认门禁：
+
+- `TRANSCRIPTION_MAX_ACTIVE_JOBS=200`：未完成任务上限，包括排队和执行中。
+- `TRANSCRIPTION_MAX_IN_FLIGHT_JOBS=4`：按唯一音频 hash 计数，不表示 4 路 GPU 并发。
+- `TRANSCRIPTION_MIN_FREE_DISK_BYTES=1073741824`：数据磁盘至少剩余 1 GiB，
+  是接纳门槛而不是空间预留。
+
+每项设为 `0` 可关闭对应限制。门禁拒绝时返回 `503`，清理本次上传，不创建新的
+可轮询任务；已有去重任务可继续复用。`503` 也可能表示状态持久化或后台任务启动
+失败；客户端应退避重试，由 operator 检查容量、磁盘和持久化状态，不要紧密循环提交。
+
+`JOBS_MAX_CACHE=200` 只限制终态任务的内存历史缓存，不会淘汰活跃任务；终态任务
+被淘汰后仍可从磁盘状态或结果查询。
+
 ## 各状态含义与典型耗时
 
 | 状态           | 含义                                                   | 典型耗时（1 小时音频） |
@@ -62,6 +79,19 @@
 
 短音频（< 10 分钟）整体通常在 1–2 分钟内完成；长音频（1 小时以上）
 应按分钟级预期。
+
+### 可选阶段时长保护
+
+`0.8.5` 默认 `DENOISE_MAX_AUDIO_DURATION_SEC=7200` 与
+`WHISPERX_ALIGN_MAX_AUDIO_DURATION_SEC=7200`。它们是音频时长保护，不是任务超时；
+超限或时长未知时，在整段音频加载前跳过对应可选阶段。降噪保留未降噪输入，
+alignment 保留转写与独立 speaker cluster，`alignment.status=skipped`，`words`
+可能缺失。设为 `0` 只关闭已知时长上限；时长未知仍跳过。
+
+embedding 先按 turn 元数据筛选、排序候选，再为每个 speaker 提取最多 10 个最长
+可用片段的平均 embedding；`EMBEDDING_PRELOAD_MAX_AUDIO_DURATION_SEC=1800`
+只限制整段预载。超限、时长未知或预载失败时按选中片段读取，speaker embedding
+仍继续，不合并 speaker cluster。
 
 ## 轮询建议
 

@@ -62,15 +62,43 @@ VoScript 是一个自托管的语音转写服务，支持多说话人分离、�
 > 重要：本技能与代理无关（agent-agnostic），同等适用于 Claude、Codex、
 > Trae、Hermes、OpenClaw 等任何 AI 代理，不依赖任何厂商专属特性。
 
-## 0.8.4 兼容说明
+## 0.8.5 兼容说明
 
-本技能包同步 VoScript `v0.8.4` 的公开行为与排障口径。对调用方来说，
-核心 HTTP 工作流仍是提交任务、轮询、取结果、管理声纹和导出文件；`0.8.4`
-主要补齐 Rust kernel foundation、发布镜像 wheel 打包、forced alignment 运行时隔离、
-ASR 幻觉过滤、embedding 音频读取路径、依赖基线和运行时默认值说明，不要求客户端改变
-既有 API 调用方式。
+本技能包同步 VoScript `v0.8.5` 的公开行为与排障口径。核心 HTTP 工作流仍是
+提交任务、轮询、取结果、管理声纹和导出文件，不要求客户端改变既有 API 调用方式。
+本节描述配置与行为契约，不把历史版本的 live validation 当作 `0.8.5` 验收结果。
 
-`0.8.4` 关键默认值和修复：
+`0.8.5` 关键默认值和保护：
+
+- `RUST_KERNEL_MODE=required` 是默认值；发布镜像包含 `voscript_core` wheel，
+  已选择的 Rust-backed 声纹计分、结果后处理和 artifact manifest helper 路径导入或
+  执行失败时 fail closed。`off` 仅用于 operator 显式回退 Python 实现，不是默认路径。
+- Compose 默认使用 `ghcr.io/mapleeve/voscript:v0.8.5` 发布镜像；普通安装执行
+  `docker compose pull voscript` 与 `docker compose up -d --no-build voscript`，
+  不使用 `--build`。`VOSCRIPT_IMAGE` 可覆盖为兼容的已发布 tag 或 digest。
+- 新任务接纳默认限制为 `TRANSCRIPTION_MAX_ACTIVE_JOBS=200`、
+  `TRANSCRIPTION_MAX_IN_FLIGHT_JOBS=4`，数据磁盘剩余空间门槛为
+  `TRANSCRIPTION_MIN_FREE_DISK_BYTES=1073741824`（1 GiB）。达到容量上限或
+  磁盘不足返回 `503` 并清理本次上传；in-flight 按唯一音频 hash 计数，不表示
+  4 路 GPU 并发，也不是磁盘预留。各项设为 `0` 可关闭对应限制。
+- 上传并计算 hash 后，先复用已完成结果或已有 in-flight 任务，再对新任务检查上述
+  门禁；`deduplicated=true` 且 `status=queued` 时仍须轮询。
+- `DENOISE_MAX_AUDIO_DURATION_SEC=7200` 与
+  `WHISPERX_ALIGN_MAX_AUDIO_DURATION_SEC=7200` 是音频时长保护，不是执行超时。
+  超限或时长未知时，在整段音频加载前跳过相应可选阶段；降噪保留未降噪输入，
+  alignment 保留转写和独立 speaker cluster，`words` 可以缺失。设为 `0` 只取消
+  已知时长音频的上限，时长未知仍跳过。
+- embedding 先按 turn 元数据筛选、排序候选，再为每个 speaker 提取最多 10 个
+  最长可用片段的平均 embedding，不先解码全部 turn。
+  `EMBEDDING_PRELOAD_MAX_AUDIO_DURATION_SEC=1800` 只限制整段预载：超限、时长未知
+  或预载失败时改为读取选中的片段，仍继续 speaker embedding；设为 `0` 取消已知
+  时长音频的预载上限。
+- forced alignment 默认 `WHISPERX_ALIGN_DEVICE=cpu`；`pipeline` / `asr` / `cuda` /
+  `cuda:0` 是显式设备覆盖。`WHISPERX_ALIGN_CACHE_ONLY=1` 会让 alignment 模型加载
+  真正离线，即使 WhisperX 不支持 `model_cache_only` 参数也不联网；缓存不完整时以
+  脱敏失败元数据降级，不下载模型。这不代表 ASR、diarization、embedding 全部离线。
+
+沿用 `0.8.4` 的默认值和历史修复：
 
 - `MODEL_IDLE_TIMEOUT_SEC=180`：默认 180 秒 GPU 空闲后卸载已加载模型；
   设置为 `0` 可关闭空闲卸载并让模型常驻。
@@ -94,14 +122,11 @@ ASR 幻觉过滤、embedding 音频读取路径、依赖基线和运行时默认
   复用，`words` 和顶层 `alignment` 仍是可选字段。
 - ASR hallucination guard 会过滤短单段 stock outro 幻觉，典型标记包括点赞、
   订阅、转发、打赏、感谢观看等；它只报告聚合过滤数量和时长，不输出原始文本日志。
-- embedding 阶段优先用 `soundfile` 一次性读取规范化 WAV，再按 diarization turn
-  切片；读取失败时回退旧的 torchaudio 分段加载，并记录安全的
-  `embedding_audio_load_timing` 聚合日志。
+- embedding 音频读取沿用 `soundfile` 路径和安全的 `embedding_audio_load_timing`
+  聚合日志；`0.8.5` 在上述元数据筛选和时长预算内预载，不能再假设所有音频均整段读取。
 - 依赖基线从 yanked WhisperX 3.1.x 迁到非 yanked WhisperX 3.3.1 兼容线，
   并收紧 pyannote / faster-whisper / pandas 等运行时边界；这属于服务端部署行为，
   不新增客户端 API 参数。
-- `RUST_KERNEL_MODE` 默认为 `off`；发布镜像会携带 `voscript_core` wheel，
-  Rust kernel bridge 先作为可验证 foundation / release gate 存在，不改变稳定 HTTP API。
 - 可观测性只增加安全 timing 日志：模型 cold-load / hot-reuse 和转写阶段耗时会记录
   阶段、模型、耗时、数量、采样率、语言、设备等聚合字段，不记录文件名、路径、
   job ID、speaker ID、host、token 或原始日志。
@@ -204,8 +229,8 @@ VoScript 通过两个参数进行访问配置：
 | `language` | string | 否 | 自动 | 语言代码，如 `zh` / `en` |
 | `min_speakers` | int | 否 | `0` | 最少说话人数，`0` 表示自动 |
 | `max_speakers` | int | 否 | `0` | 最多说话人数，`0` 表示自动 |
-| `denoise_model` | string | 否 | `none` | 可选 `none` / `deepfilternet` / `noisereduce` |
-| `snr_threshold` | float | 否 | `10.0` | 信噪比阈值 |
+| `denoise_model` | string | 否 | 继承服务端（默认 `none`） | 可选 `none` / `deepfilternet` / `noisereduce`；显式 `none` 只关闭本次降噪 |
+| `snr_threshold` | float | 否 | 继承服务端（默认 `10.0`） | DeepFilterNet SNR gate，不作用于 `noisereduce` |
 | `no_repeat_ngram_size` | int | 否 | `0` | 解码时抑制 n-gram 重复 |
 
 ```bash
@@ -231,6 +256,9 @@ curl -X POST "$VOSCRIPT_URL/api/transcribe" \
 > - `{"status":"queued","deduplicated":true}`：命中并发中的同内容任务，**仍需继续轮询**
 >   `/api/jobs/{id}`，直到 `completed` 或 `failed`。
 
+去重复用先于新任务容量和磁盘门禁；新音频收到 `503` 时应退避重试或交由 operator
+检查负载、可用空间和持久化状态，不要把接纳上限误当 GPU 并发数。
+
 **错误响应表：**
 
 | HTTP | 含义 | 排查 |
@@ -239,6 +267,7 @@ curl -X POST "$VOSCRIPT_URL/api/transcribe" \
 | 413 | 文件过大 | 超过服务端 MAX_UPLOAD_BYTES 限制（默认 2 GiB） |
 | 422 | 参数校验失败 | 检查 min_speakers/max_speakers/denoise_model 值是否合法 |
 | 500 | 服务端错误 | 查看容器日志 `docker logs voscript` |
+| 503 | 暂时无法接纳或启动新任务 | 检查活跃/in-flight 上限、数据磁盘可用空间及持久化状态，退避后重试 |
 
 执行脚本：
 
@@ -593,13 +622,14 @@ VoScript 返回标准 HTTP 状态码，代理在处理响应时应按下表做�
 | 413    | 文件过大               | 检查服务端 `MAX_UPLOAD_BYTES`（默认 2 GiB）       |
 | 422    | 请求参数校验失败       | 根据返回 `detail` 字段检查参数，常见于缺少 `file` |
 | 500    | 服务端错误             | 收集 `error` 字段，必要时检查服务端日志          |
+| 503    | 新任务暂不可接纳或启动 | 退避重试；检查容量、磁盘、持久化和后台任务启动状态 |
 
 ## 诊断检查清单
 
 遇到问题时，按以下顺序排查：
 
 1. **服务可达性**：`curl $VOSCRIPT_URL/healthz` 是否 200
-2. **鉴权**：`X-API-Key` 是否与容器环境变量 `VOSCRIPT_API_KEY` 一致，有无多余空格
+2. **鉴权**：调用端 `VOSCRIPT_API_KEY` / `X-API-Key` 是否与服务端 `API_KEY` 一致，有无多余空格
 3. **任务状态**：先通过 `/api/jobs/{id}` 确认 `completed`，再拉结果
 4. **声纹标签**：注册声纹时使用 `SPEAKER_XX` 原始标签，不是显示名
 5. **similarity 语义**：不是概率；cohort < 10 时是 raw cosine，cohort ≥ 10 时是 AS-norm 分数
@@ -635,10 +665,16 @@ VoScript 返回标准 HTTP 状态码，代理在处理响应时应按下表做�
     `alignment` 仍是可选字段，失败或跳过不等于任务失败。
 17. **ASR outro 幻觉过滤（0.8.4）**：短单段 stock outro 标记被聚合过滤；公开报告
     只描述过滤行为和聚合计数，不贴真实文本、文件名或原始日志。
-18. **embedding 音频读取（0.8.4）**：优先一次性 `soundfile` 读取规范化 WAV 后切片，
-    失败时回退 torchaudio 分段加载；排障看安全的 `embedding_audio_load_timing` /
-    `embedding_processing_timing` 聚合字段。
-19. **容器日志**：`docker logs voscript` 查看详细栈回溯
+18. **embedding 音频读取（0.8.5）**：先按 turn 元数据排序，再按 speaker 提取最多
+    10 个最长可用片段；已知时长不超过 1800 秒才默认整段预载，超限、未知或预载
+    失败时按选中片段读取。排障看安全 timing 聚合字段，不贴音频或真实 speaker 信息。
+19. **可选阶段时长保护（0.8.5）**：降噪和 alignment 默认超过 7200 秒或时长未知
+    即跳过，不是任务超时；保留未降噪输入或转写与 speaker cluster，不合并说话人。
+20. **alignment 离线加载（0.8.5）**：`WHISPERX_ALIGN_CACHE_ONLY=1` 禁止
+    alignment 模型加载联网；缺缓存时降级，不代表整个转写 pipeline 都离线。
+21. **503 接纳保护（0.8.5）**：默认 active 200、唯一 hash in-flight 4、数据磁盘
+    至少剩余 1 GiB；先去重复用，再对新任务检查门禁。不要靠重复并发提交绕过保护。
+22. **容器日志**：`docker logs voscript` 查看详细栈回溯
 
 ## 典型使用序列
 
