@@ -171,8 +171,11 @@ Every script outputs a structured failure report on error — so the agent knows
 
 ## VoScript Compatibility
 
-This package tracks VoScript `v0.8.4` behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints, while the skill now reflects the current runtime defaults, Rust kernel foundation, release-image wheel packaging, alignment isolation, hallucination guard, embedding audio loading, and dependency-baseline fixes:
+This package tracks VoScript `v0.8.5` behavior. The public workflow remains submit → poll → fetch/export → manage voiceprints. Current defaults include the protections below while retaining the earlier alignment isolation, hallucination guard, device handling, and dependency-baseline fixes:
 
+- Published Docker images include the `voscript_core` wheel. `RUST_KERNEL_MODE=required` is the default: selected Rust-backed paths fail closed on import or execution errors. `off` is an explicit operator rollback to Python, not the default.
+- Compose uses `ghcr.io/mapleeve/voscript:v0.8.5` by default. Normal installation uses `docker compose pull voscript` and `docker compose up -d --no-build voscript`, not `--build`; preserve existing data, voiceprints, model caches, and AS-norm cohorts.
+- New-job admission defaults to 200 active jobs, 4 in-flight unique audio hashes, and at least 1 GiB free data-disk space. Capacity or disk pressure returns `503`; completed/in-flight dedup reuse happens before these checks. The in-flight limit is not GPU concurrency.
 - `MODEL_IDLE_TIMEOUT_SEC=180` unloads loaded GPU models after 3 idle minutes; set `0` to keep models resident.
 - Docker Compose requests every Docker-exposed NVIDIA GPU by default and does not inject `CUDA_VISIBLE_DEVICES=0`; restrict visibility only with a local override or explicit operator env.
 - `DEVICE=cuda` lets ASR/faster-whisper, diarization/pyannote, and embedding/WeSpeaker each choose the visible GPU with the most free memory during its own lazy load; indexed values such as `cuda:0` remain pinned.
@@ -180,10 +183,11 @@ This package tracks VoScript `v0.8.4` behavior. The public workflow remains subm
 - faster-whisper receives `device="cuda"` plus `device_index` even when the internal torch device is `cuda:N`, avoiding unsupported `cuda:0` loads.
 - pyannote diarization uses runtime-localized configs for complete local Hugging Face snapshots, so nested segmentation and embedding models also resolve to local weights.
 - The ASR guard now filters short stock-outro hallucinations dominated by like/subscribe/share/donation/watch-ending markers, while preserving normal long-form meeting context.
-- Speaker embedding extraction now reads the normalized WAV once through `soundfile` and slices by diarization turns, with a torchaudio segment-load fallback if that read fails.
+- Denoising and forced alignment each default to a 7200-second audio-duration guard, not an execution timeout. Over-budget or unknown-duration audio skips the optional stage, preserving the undenoised input or transcription and independent speaker clusters.
+- Speaker embedding extraction ranks turn metadata before extracting up to 10 longest usable chunks per speaker. Full-audio preload defaults to a 1800-second limit; longer/unknown-duration audio or preload failures use selected chunk reads instead.
+- `WHISPERX_ALIGN_CACHE_ONLY=1` makes alignment model loading offline even when WhisperX lacks the cache-only keyword. Incomplete caches degrade to sanitized optional alignment failure metadata, not downloads; other pipeline models are not made globally offline.
 - The runtime dependency baseline moves off the yanked WhisperX 3.1.x line to the compatible non-yanked WhisperX 3.3.1 path with bounded adjacent dependencies.
-- Published Docker images include the `voscript_core` wheel. `RUST_KERNEL_MODE` remains `off` by default, so the Rust kernel bridge is a verified foundation/release-gate path without changing the stable HTTP API.
-- The existing notes on in-flight dedup polling, persisted AS-norm cohorts, unbounded AS-norm scores, PyTorch 2.6 checkpoint-safe loading, and new-voice AS-norm validation still apply.
+- The existing notes on in-flight dedup polling, persisted AS-norm cohorts, unbounded AS-norm scores, PyTorch 2.6 checkpoint-safe loading, and the new-voice AS-norm validation workflow still apply. Historical validation results are not evidence of `0.8.5` E2E success.
 
 It does not promise provider preset/API selection, streaming sessions, or full speaker memory as completed features; those remain future-version work.
 

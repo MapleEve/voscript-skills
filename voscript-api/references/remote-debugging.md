@@ -17,8 +17,12 @@ If the direct SSH alias is unavailable, use the documented WAN alias through the
 local SOCKS proxy:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> '<cmd>'
+ssh -o ProxyCommand="<SOCKS_PROXY_COMMAND>" <WAN_SSH_ALIAS> '<cmd>'
 ```
+
+`<SOCKS_PROXY_COMMAND>` is the documented operator-local command template
+`nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PORT> %h %p`. Resolve its placeholders
+privately from operator configuration; never publish the actual host or port.
 
 Verify the documented direct SSH alias first, then the WAN ProxyCommand flow if
 needed. If both fail but the user's terminal succeeds, treat the sandbox result
@@ -34,7 +38,8 @@ plans.
 - Keep real connection material in ignored operator config, shell environment,
   local SSH config, or another ignored local config file.
 - Public examples may only name placeholders such as `<DIRECT_SSH_ALIAS>`,
-  `<WAN_SSH_ALIAS>`, `<SOCKS_PROXY_HOST>`, and `<SOCKS_PROXY_PORT>`. The actual
+  `<WAN_SSH_ALIAS>`, `<SOCKS_PROXY_COMMAND>`, `<SOCKS_PROXY_HOST>`, and
+  `<SOCKS_PORT>`. The actual
   alias names, host, user, proxy address, proxy port, key, token, and deployment
   path values must remain local-only.
 
@@ -49,7 +54,7 @@ ssh <DIRECT_SSH_ALIAS> 'hostname; date'
 If direct SSH is unavailable, verify WAN through the proxy:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> 'hostname; date'
+ssh -o ProxyCommand="<SOCKS_PROXY_COMMAND>" <WAN_SSH_ALIAS> 'hostname; date'
 ```
 
 Codex should not replace these placeholders with lower-level SSH host or port
@@ -66,7 +71,7 @@ ssh <DIRECT_SSH_ALIAS> '<cmd>'
 For WAN:
 
 ```bash
-ssh -o 'ProxyCommand=nc -X 5 -x <SOCKS_PROXY_HOST>:<SOCKS_PROXY_PORT> %h %p' <WAN_SSH_ALIAS> '<cmd>'
+ssh -o ProxyCommand="<SOCKS_PROXY_COMMAND>" <WAN_SSH_ALIAS> '<cmd>'
 ```
 
 For multi-line remote work, write a temporary local script or here-doc and send

@@ -55,15 +55,31 @@ registry verification complete.
    ```
 
 4. Verify version metadata and changelog are aligned.
-5. Run the same fast checks as the repository CI: lint, format, unit/security tests, and dependency audit.
+5. Require successful repository CI for lint, format, unit/security tests, dependency audit, and required heavy checks on the exact source commit.
 6. Create or update the PR with anonymized text only.
 7. Wait for PR checks and inspect logs before merging if any check fails.
 8. Before merge, review changed files, release notes, public leak scan, Docker healthcheck, version metadata, and changelog.
 9. Merge using the repository's existing merge style.
-10. Create the GitHub release/tag only after the merge commit is known.
-11. Watch the Docker release workflow until it finishes. Report image tags and digests when available.
-12. Complete the post-release local checkout sync checklist below.
-13. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
+10. Create the stable version tag and publish its non-draft, non-prerelease GitHub
+    Release only after the integrated main PR merge commit and its checks are
+    known. The tag must match the application version and resolve to that exact
+    integrated commit, reachable from `main`.
+11. Manually dispatch `.github/workflows/release.yml` from branch `main`, passing
+    the already published stable `v<version>` as input `tag`. Creating/pushing a
+    tag or publishing a GitHub Release does not automatically trigger Docker
+    publication; dispatching from a tag or feature branch is not supported.
+12. Require the read-only `validate-source` job to succeed first. It checks out
+    the immutable trusted main control SHA, validates the tag, integrated PR,
+    main ancestry, stable Release, version, branch protection and exact-SHA CI
+    evidence, then scans the validated source using the trusted main scanner.
+    Candidate metadata is parsed as data; candidate helpers are not executed
+    in this validation job, and it has no registry publishing permission.
+13. Only then may `publish` build the exact validated source, audit and smoke
+    the immutable image, revalidate source evidence before registry writes, and
+    push that same image without rebuilding. Wait for the workflow to finish;
+    record the tag, source SHA, workflow result, image tags and digests.
+14. Complete the post-release local checkout sync checklist below.
+15. Before deleting any feature worktree, complete the post-release local wrap-up checklist below.
 
 ## Remote deploy verification
 
@@ -80,8 +96,9 @@ the PR merge/tag/release source is known:
 4. Fetch tags and update only to the intended release branch, tag, or merge
    commit. If a hard reset is necessary to deploy the release, do it only after
    step 3.
-5. Rebuild/restart the container using the repository's compose/service
-   definition. Do not delete runtime data, ignored validation artifacts, or
+5. Pull the intended published image and recreate the service using the
+   repository's compose definition with `--no-build`; do not rebuild the release
+   locally. Do not delete runtime data, ignored validation artifacts, or
    persisted model/voiceprint stores unless the user explicitly asks.
 6. Treat container/service `voscript` on the default service port as primary.
    Old candidate containers or candidate ports are not release failures unless
@@ -107,14 +124,20 @@ the PR merge/tag/release source is known:
 
 ## Docker publication checks
 
-The main repository publishes Docker images through its release workflow. Do not invent another registry or push path.
+The main repository publishes Docker images only through a manual dispatch of
+`.github/workflows/release.yml` from `main`, using an existing published stable
+tag. Trusted main read-only validation must pass before publishing begins.
+Tag pushes and GitHub Release events do not trigger this workflow. Do not invent
+another registry or push path.
 
 For VoScript 0.8.x, expected public tags are:
 
-- GHCR: `ghcr.io/mapleeve/voscript:latest` and `ghcr.io/mapleeve/voscript:v<version>`
-- Docker Hub: `<dockerhub-user>/voscript:latest` and `<dockerhub-user>/voscript:<version>`
+- GHCR: `ghcr.io/mapleeve/voscript:v<version>` and `ghcr.io/mapleeve/voscript:sha-<source-sha>`
+- Docker Hub: `mapleeve/voscript:<version>` and `mapleeve/voscript:sha-<source-sha>`
 
-If both `push tag` and `release published` workflows run for the same commit, treat them as duplicate publications of the same source. Wait for completion and report both if they differ.
+Both registries receive `latest` only when the selected tag is the latest
+published GitHub Release; publishing an older stable tag must not roll `latest`
+back. A GitHub Release alone is not evidence that its Docker images exist.
 
 ## Post-release local checkout sync
 

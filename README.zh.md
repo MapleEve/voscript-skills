@@ -171,8 +171,11 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 
 ## VoScript 兼容说明
 
-本包同步 VoScript `v0.8.4` 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹，同时 skill 已同步当前运行时默认值、Rust kernel foundation、发布镜像 wheel 打包、alignment 隔离、幻觉过滤、embedding 音频读取和依赖基线修复：
+本包同步 VoScript `v0.8.5` 行为。公开工作流仍是提交任务 → 轮询 → 获取/导出结果 → 管理声纹。当前默认值包含以下保护，同时保留此前的 alignment 隔离、幻觉过滤、设备处理和依赖基线修复：
 
+- 发布 Docker 镜像包含 `voscript_core` wheel；`RUST_KERNEL_MODE=required` 是默认值，所选 Rust-backed 路径导入或执行失败时 fail closed。`off` 仅供 operator 显式回退 Python，不是默认路径。
+- Compose 默认使用 `ghcr.io/mapleeve/voscript:v0.8.5`。普通安装执行 `docker compose pull voscript` 和 `docker compose up -d --no-build voscript`，不使用 `--build`；保留已有数据、声纹、模型缓存和 AS-norm cohort。
+- 新任务接纳默认上限为 active 200、唯一音频 hash in-flight 4，并要求数据磁盘至少剩余 1 GiB；容量或磁盘门禁拒绝返回 `503`，先复用完成结果或已有 in-flight 任务再检查门禁。in-flight 上限不表示 GPU 并发数。
 - `MODEL_IDLE_TIMEOUT_SEC=180` 表示 GPU 模型默认空闲 3 分钟后卸载；设为 `0` 可让模型常驻。
 - Docker Compose 默认请求 Docker 暴露的所有 NVIDIA GPU，不再注入 `CUDA_VISIBLE_DEVICES=0`；需要限制可见卡时只通过本地 override 或显式 operator env。
 - `DEVICE=cuda` 表示 ASR/faster-whisper、diarization/pyannote、embedding/WeSpeaker 会在各自 lazy load 时分别选择当前可见 GPU 中空闲显存最多的设备；`cuda:0` 等显式索引保持固定。
@@ -180,10 +183,11 @@ git clone https://github.com/MapleEve/voscript-skills.git ~/.claude/skills/
 - faster-whisper 即使面对内部 torch 设备 `cuda:N`，加载时也会收到 `device="cuda"` 与 `device_index`，避免 unsupported `cuda:0`。
 - pyannote diarization 在完整本地 Hugging Face snapshot 存在时会使用 runtime-localized config，使内嵌 segmentation / embedding 也指向本地权重。
 - ASR guard 会过滤短单段 stock outro 幻觉，例如点赞、订阅、转发、打赏、感谢观看等尾巴标记高度集中的非重复幻觉，同时保留长会议中的正常上下文词。
-- speaker embedding 提取会优先用 `soundfile` 一次性读取规范化 WAV，再按 diarization turn 切片；读取失败时回退 torchaudio 分段加载。
+- 降噪和 forced alignment 默认各有 7200 秒音频时长保护，不是执行超时；超限或时长未知时跳过相应可选阶段，保留未降噪输入或转写与独立 speaker cluster。
+- speaker embedding 先按 turn 元数据排序，再为每个 speaker 提取最多 10 个最长可用片段；整段预载默认上限为 1800 秒，超限、时长未知或预载失败时按选中片段读取。
+- `WHISPERX_ALIGN_CACHE_ONLY=1` 让 alignment 模型加载真正离线，即使 WhisperX 不支持 cache-only 参数也不联网；缺缓存时以脱敏的可选 alignment 失败元数据降级，不下载模型，不代表其它 pipeline 模型全局离线。
 - 运行时依赖基线从 yanked WhisperX 3.1.x 迁到兼容的非 yanked WhisperX 3.3.1 路径，并收紧相邻依赖边界。
-- 发布 Docker 镜像包含 `voscript_core` wheel；`RUST_KERNEL_MODE` 默认仍为 `off`，因此 Rust kernel bridge 先作为可验证 foundation / release gate 路径存在，不改变稳定 HTTP API。
-- 并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数、PyTorch 2.6 checkpoint 安全加载、新声音 AS-norm 验证模式仍适用。
+- 并发去重仍需轮询、持久化 AS-norm cohort、AS-norm 无界分数、PyTorch 2.6 checkpoint 安全加载、新声音 AS-norm 验证工作流仍适用；历史验证结果不能视为 `0.8.5` E2E 通过证据。
 
 本包不承诺 provider preset/API 选择、streaming session 或完整 speaker memory 已完成；这些仍属于后续版本工作。
 
