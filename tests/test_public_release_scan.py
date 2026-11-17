@@ -96,6 +96,58 @@ class PublicReleaseSecretScanTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("internal document reference", result.stdout)
 
+    def test_internal_document_references_allow_sentence_punctuation(self) -> None:
+        filenames = (
+            "AGENTS" + ".local.md",
+            "CLAUDE" + ".local.md",
+            "docs/release" + ".local.md",
+            "CONT" + "EXT.md",
+            "ROAD" + "MAP.md",
+            "ADR" + "0012-design.md",
+        )
+        for filename in filenames:
+            references = (
+                f"Read {filename}.",
+                f"Read `{filename}`.",
+                f"[details]({filename}).",
+                f'<a href="{filename}">details</a>.',
+                "Read " + filename.replace(".", "%2E") + ".",
+                "Read " + filename.replace(".", "&#46;") + ".",
+            )
+            for content in references:
+                with (
+                    self.subTest(content=content),
+                    tempfile.TemporaryDirectory() as tmp,
+                ):
+                    root = Path(tmp)
+                    result = scan_fixture(root, Path("README.md"), content)
+                    output = result.stdout + result.stderr
+                    self.assertEqual(result.returncode, 1, output)
+                    self.assertIn("internal document reference", output)
+                    self.assertIn(scanner.REDACTED_EXCERPT, output)
+                    self.assertNotIn(filename, output)
+                    self.assertNotIn(content, output)
+                    findings = scanner.line_findings(root, [Path("README.md")])
+                    self.assertTrue(
+                        any(
+                            finding.category == "internal document reference"
+                            for finding in findings
+                        )
+                    )
+                    self.assertTrue(
+                        all(
+                            finding.excerpt == scanner.REDACTED_EXCERPT
+                            for finding in findings
+                        )
+                    )
+
+    def test_local_override_reference_does_not_match_a_longer_filename(self) -> None:
+        for suffix in (".example", "-template", "x"):
+            with self.subTest(suffix=suffix):
+                filename = "AGENTS" + ".local.md" + suffix
+                result = run_scan_with(f"Read {filename}.")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_blocks_real_looking_env_style_secret_assignments(self) -> None:
         synthetic_value_a = "sk-live-" + "realisticsecret123456789"
         synthetic_value_b = "hf_" + "realisticsecret123456789"
@@ -394,12 +446,15 @@ class PublicReleasePrivacyContractTests(unittest.TestCase):
 
     def test_every_diagnostic_redacts_the_entire_source_line(self) -> None:
         markers = (
-            "/" + "Users/example/private.txt",
-            "road" + "map/private.md",
-            "private" + " corpus",
-            "~/." + "ssh/config",
+            ("/" + "Users/example/private.txt", {"machine-local path"}),
+            (
+                "road" + "map/private.md",
+                {"internal document reference", "local-only directory reference"},
+            ),
+            ("private" + " corpus", {"private validation corpus name"}),
+            ("~/." + "ssh/config", {"local ssh" + " config path"}),
         )
-        for marker in markers:
+        for marker, marker_categories in markers:
             with self.subTest(marker=marker), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 secret = "sk-live-" + "syntheticcredentialvalue123456789"
@@ -412,13 +467,23 @@ class PublicReleasePrivacyContractTests(unittest.TestCase):
                 self.assertNotIn(content, output)
                 self.assertIn(scanner.REDACTED_EXCERPT, output)
                 findings = scanner.line_findings(root, [Path("README.md")])
-                self.assertGreaterEqual(len(findings), 3)
+                required_categories = {"secret-looking assignment"} | marker_categories
+                self.assertTrue(
+                    required_categories <= {finding.category for finding in findings}
+                )
+                for category in required_categories:
+                    self.assertIn(category, output)
                 self.assertTrue(
                     all(
                         finding.excerpt == scanner.REDACTED_EXCERPT
                         for finding in findings
                     )
                 )
+                for finding in findings:
+                    self.assertEqual(finding.path, "README.md")
+                    self.assertEqual(finding.line, 1)
+                    self.assertNotIn(secret, repr(finding))
+                    self.assertNotIn(marker, repr(finding))
 
     def test_diagnostic_paths_cannot_echo_a_credential_in_a_tracked_filename(
         self,
@@ -496,9 +561,7 @@ class PublicReleasePrivacyContractTests(unittest.TestCase):
                 root = Path(tmp)
                 filename = "ADR" + "0012_design.md"
                 path = (
-                    Path("doc") / filename
-                    if artifact == "adr"
-                    else Path("README.md")
+                    Path("doc") / filename if artifact == "adr" else Path("README.md")
                 )
                 content = (
                     "Synthetic decision"
