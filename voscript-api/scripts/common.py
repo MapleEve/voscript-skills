@@ -202,7 +202,7 @@ MSGS: Dict[str, Dict[str, str]] = {
         "chk_url": "□ VoScript server URL correct (includes http:// scheme)",
         "chk_key": "□ API key matches the server-side configuration",
         "chk_network": "□ Network is reachable ($VOSCRIPT_URL/healthz returns 200)",
-        "chk_running": "□ Server is running (ssh in and check `docker ps` for voscript)",
+        "chk_running": "□ Server is running (check `docker ps` for voscript)",
         "file_missing": "File does not exist",
         "file_not_readable": "File is not readable",
         "file_empty": "File is empty (0 bytes)",

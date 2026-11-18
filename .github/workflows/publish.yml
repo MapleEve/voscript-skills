@@ -4,71 +4,168 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'voscript-api/**'
-      - 'bin/**'
-      - 'package.json'
-      - '.github/workflows/publish.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publication
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  validate:
+    uses: ./.github/workflows/ci.yml
     permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
+      contents: read
 
-      - uses: actions/setup-node@v4
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      version: ${{ steps.version.outputs.pkg }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          node-version: '20'
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Public release scan
-        run: npm run public-scan
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Package dry run
-        run: npm run pack:dry
-
-      - name: Check version changed
+      - name: Check publication state
         id: version
+        env:
+          RELEASE_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           PKG_VERSION=$(node -p "require('./package.json').version")
-          NPM_VERSION=$(npm view voscript-skills version 2>/dev/null || echo "0.0.0")
-          echo "pkg=$PKG_VERSION" >> $GITHUB_OUTPUT
-          echo "npm=$NPM_VERSION" >> $GITHUB_OUTPUT
-          if [ "$PKG_VERSION" != "$NPM_VERSION" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
+          [[ "$PKG_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          npm view voscript-skills versions --json > "$RUNNER_TEMP/npm-versions.json"
+          PUBLISHED=$(node -e '
+            const fs = require("node:fs");
+            const versions = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (!Array.isArray(versions)) throw new Error("Invalid registry response");
+            console.log(versions.includes(process.argv[2]) ? "true" : "false");
+          ' "$RUNNER_TEMP/npm-versions.json" "$PKG_VERSION")
+          RELEASE=true
+          if [ "$PUBLISHED" = true ]; then
+            PUBLISHED_SHA=$(npm view "voscript-skills@$PKG_VERSION" gitHead)
+            if [ "$PUBLISHED_SHA" != "$RELEASE_SHA" ]; then
+              RELEASE=false
+              echo "Version already published from a different commit; no new release."
+            fi
           fi
+          echo "pkg=$PKG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
 
       - name: Publish to npm
-        if: steps.version.outputs.changed == 'true'
-        run: npm publish --provenance
+        if: steps.version.outputs.published == 'false'
+        run: npm publish --provenance --registry https://registry.npmjs.org
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Release
-        if: steps.version.outputs.changed == 'true'
+      - name: Verify npm source commit
+        if: steps.version.outputs.release == 'true'
+        env:
+          PKG_VERSION: ${{ steps.version.outputs.pkg }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
-          gh release create "v${{ steps.version.outputs.pkg }}" \
-            --title "v${{ steps.version.outputs.pkg }}" \
-            --notes "$(cat <<'NOTES'
+          set -euo pipefail
+          test "$(npm view "voscript-skills@$PKG_VERSION" gitHead)" = "$RELEASE_SHA"
+
+  release:
+    needs: publish
+    if: needs.publish.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create GitHub Release at published commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_DEBUG: ''
+          GH_REPO: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.sha }}
+          TAG: v${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          remote_tag_commit() {
+            local record kind sha depth
+            record=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" \
+              --jq '.object | [.type, .sha] | @tsv') || return 1
+            read -r kind sha <<< "$record"
+            for ((depth=0; depth<16; depth++)); do
+              [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
+              case "$kind" in
+                commit) printf '%s\n' "$sha"; return 0 ;;
+                tag)
+                  record=$(gh api "repos/$GH_REPO/git/tags/$sha" \
+                    --jq '.object | [.type, .sha] | @tsv') || return 1
+                  read -r kind sha <<< "$record"
+                  ;;
+                *) return 1 ;;
+              esac
+            done
+            return 1
+          }
+
+          verify_remote_tag() {
+            local actual_sha
+            if ! actual_sha=$(remote_tag_commit); then
+              echo '::error::Unable to resolve the remote version tag to a commit.'
+              return 1
+            fi
+            if [ "$actual_sha" != "$RELEASE_SHA" ]; then
+              echo '::error::Remote version tag does not match the published source commit.'
+              return 1
+            fi
+          }
+
+          # Create, never update: an existing ref must independently resolve correctly.
+          if ! gh api --method POST "repos/$GH_REPO/git/refs" --include \
+            -f ref="refs/tags/$TAG" -f sha="$RELEASE_SHA" \
+            > "$RUNNER_TEMP/tag-create.response" 2> "$RUNNER_TEMP/tag-create.error"; then
+            STATUS=$(awk 'NR == 1 {print $2}' "$RUNNER_TEMP/tag-create.response")
+            case "$STATUS" in
+              409|422) echo 'Tag creation conflicted; checking the actual remote target.' ;;
+              *) echo '::error::Remote tag creation failed; rerun after resolving the API error.'; exit 1 ;;
+            esac
+          fi
+          verify_remote_tag
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; rechecking its remote tag.'
+          else
+            gh release create "$TAG" --verify-tag \
+              --title "$TAG" \
+              --notes "$(cat <<'NOTES'
           Install or update:
           ```bash
           npx voscript-skills
           ```
-          Full changelog: https://github.com/MapleEve/voscript-skills/commits/main
           npm: https://www.npmjs.com/package/voscript-skills
           NOTES
           )"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fi
+          verify_remote_tag
+          echo 'Remote version tag matches the published source commit.'
