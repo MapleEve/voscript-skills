@@ -595,5 +595,114 @@ class PublicReleasePrivacyContractTests(unittest.TestCase):
                 self.assertIn("redacted", result.stderr)
 
 
+class PublicReleaseTextSurfaceTests(unittest.TestCase):
+    SUFFIXES = (
+        ".cfg",
+        ".cjs",
+        ".css",
+        ".cts",
+        ".dockerignore",
+        ".env",
+        ".gitignore",
+        ".html",
+        ".ini",
+        ".js",
+        ".json",
+        ".jsx",
+        ".map",
+        ".md",
+        ".mjs",
+        ".mts",
+        ".py",
+        ".rst",
+        ".sh",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".yaml",
+        ".yml",
+    )
+
+    def test_all_text_surfaces_block_secret_and_internal_references(self) -> None:
+        secret = "sk-live-" + "syntheticcredentialvalue123456789"
+        reference = "CONT" + "EXT.md"
+        content = f"API_KEY={secret}\nRead {reference}."
+        for suffix in self.SUFFIXES:
+            for stage in (True, False):
+                with (
+                    self.subTest(suffix=suffix, stage=stage),
+                    tempfile.TemporaryDirectory() as tmp,
+                ):
+                    result = scan_fixture(
+                        Path(tmp),
+                        Path("public" + suffix),
+                        content,
+                        stage=stage,
+                        include_untracked=not stage,
+                    )
+                    output = result.stdout + result.stderr
+                    self.assertEqual(result.returncode, 1, output)
+                    self.assertIn("secret-looking assignment", output)
+                    self.assertIn("internal document reference", output)
+                    self.assertIn(scanner.REDACTED_EXCERPT, output)
+                    self.assertNotIn(secret, output)
+                    self.assertNotIn(reference, output)
+                    self.assertNotIn(content, output)
+
+    def test_all_text_surfaces_allow_public_placeholders(self) -> None:
+        for suffix in self.SUFFIXES:
+            with self.subTest(suffix=suffix):
+                result = run_scan_with(
+                    "API_KEY=<API_KEY>\nUsage: configure the service.",
+                    "public" + suffix,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_internal_document_diagnostic_paths_are_redacted(self) -> None:
+        paths = [
+            Path(directory) / "synthetic-operator-note.md"
+            for directory in (
+                "adr",
+                "adrs",
+                "roadmap",
+                "tmp",
+                "internal",
+                "local-docs",
+                "local_docs",
+                "validation-notes",
+                "validation_notes",
+            )
+        ] + [
+            Path("doc") / ("ADR" + "0012-synthetic-decision.md"),
+            Path("doc") / ("CONT" + "EXT.md"),
+            Path("doc") / ("CONT" + "EXT-MAP.md"),
+            Path("doc") / ("ROAD" + "MAP.md"),
+            Path("release" + ".local.md"),
+        ]
+        for path in paths:
+            with self.subTest(path=path):
+                result = run_scan_with("Synthetic operator-only note.", str(path))
+                output = result.stdout + result.stderr
+                self.assertEqual(result.returncode, 1, output)
+                self.assertIn("tracked local-only directory", output)
+                self.assertIn("[sensitive path redacted]:1:", output)
+                self.assertNotIn(str(path), output)
+                self.assertNotIn(path.name, output)
+                self.assertIn(scanner.REDACTED_EXCERPT, output)
+                self.assertEqual(
+                    scanner.diagnostic_path(str(path)), "[sensitive path redacted]"
+                )
+
+    def test_public_diagnostic_paths_remain_available(self) -> None:
+        secret = "hf_" + "syntheticcredentialvalue123456789"
+        result = run_scan_with("API_KEY=" + secret, "doc/usage.md")
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 1, output)
+        self.assertIn("doc/usage.md:1: secret-looking assignment", output)
+        self.assertNotIn(secret, output)
+        self.assertEqual(scanner.diagnostic_path("doc/usage.md"), "doc/usage.md")
+
+
 if __name__ == "__main__":
     unittest.main()
